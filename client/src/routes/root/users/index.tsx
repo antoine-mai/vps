@@ -7,6 +7,7 @@ import {
     Loader2,
     X,
     Key,
+    KeyRound,
     CheckCircle,
     Eye,
     EyeOff,
@@ -119,7 +120,17 @@ export default function UsersRoute() {
     const [contextMenu, setContextMenu] = useState<UserContextMenu | null>(null);
     const [deleteConfirmUser, setDeleteConfirmUser] = useState<LinuxUser | null>(null);
 
-    // Modal state
+    // Change Password modal state
+    const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+    const [changePasswordTarget, setChangePasswordTarget] = useState<LinuxUser | null>(null);
+    const [changePasswordValue, setChangePasswordValue] = useState("");
+    const [changePasswordConfirm, setChangePasswordConfirm] = useState("");
+    const [changePasswordShow, setChangePasswordShow] = useState(false);
+    const [changePasswordSaving, setChangePasswordSaving] = useState(false);
+    const [changePasswordError, setChangePasswordError] = useState("");
+    const [changePasswordSuccess, setChangePasswordSuccess] = useState(false);
+
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -215,6 +226,65 @@ export default function UsersRoute() {
         setContextMenu(null);
         setDeleteConfirmUser(user);
     };
+
+    const openChangePassword = (user: LinuxUser) => {
+        setChangePasswordTarget(user);
+        setChangePasswordValue("");
+        setChangePasswordConfirm("");
+        setChangePasswordShow(false);
+        setChangePasswordError("");
+        setChangePasswordSuccess(false);
+        setChangePasswordOpen(true);
+    };
+
+    const changePasswordFromContextMenu = () => {
+        if (!contextMenu) return;
+        const user = contextMenu.user;
+        setContextMenu(null);
+        openChangePassword(user);
+    };
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!changePasswordTarget) return;
+        setChangePasswordError("");
+        if (!changePasswordValue.trim()) {
+            setChangePasswordError("Password is required");
+            return;
+        }
+        if (changePasswordValue !== changePasswordConfirm) {
+            setChangePasswordError("Passwords do not match");
+            return;
+        }
+        setChangePasswordSaving(true);
+        try {
+            const res = await fetch("/post/user/password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: changePasswordTarget.username, password: changePasswordValue }),
+            });
+            if (!res.ok) throw new Error((await res.text()) || "Failed to change password");
+            setChangePasswordSuccess(true);
+            setChangePasswordValue("");
+            setChangePasswordConfirm("");
+            await fetchUsers(true);
+        } catch (err) {
+            setChangePasswordError(err instanceof Error ? err.message : "Failed to change password");
+        } finally {
+            setChangePasswordSaving(false);
+        }
+    };
+
+    const generateChangePassword = () => {
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=";
+        let result = "";
+        for (let i = 0; i < 16; i++) result += charset[Math.floor(Math.random() * charset.length)];
+        setChangePasswordValue(result);
+        setChangePasswordConfirm(result);
+        setChangePasswordShow(true);
+    };
+
+
 
     const fetchUsers = async (showRefresh = false) => {
         if (showRefresh) setIsRefreshing(true);
@@ -590,6 +660,17 @@ export default function UsersRoute() {
                                         <Sliders className="h-3.5 w-3.5 text-primary" />
                                         <span>Limits: {userLimits?.maxTasks ?? 10} Tasks / {userLimits?.maxContainers ?? 5} Apps</span>
                                     </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 gap-1.5 px-2 text-xs"
+                                        onClick={() => openChangePassword(selectedUser)}
+                                        title="Change this user's Linux password"
+                                    >
+                                        <KeyRound className="h-3.5 w-3.5" />
+                                        Change Password
+                                    </Button>
+
                                     {!selectedUser.cpanelEnabled ? (
                                         <Button size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={() => { setActivationError(""); setActivationOpen(true); }}>
                                             <Key className="h-3.5 w-3.5" />
@@ -1003,6 +1084,11 @@ export default function UsersRoute() {
                     <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={() => navigateFromContextMenu("backup")} role="menuitem">
                         <Archive className="h-3.5 w-3.5 text-muted-foreground" />Backup
                     </button>
+                    <div className="my-1 border-t border-border" />
+                    <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={changePasswordFromContextMenu} role="menuitem">
+                        <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />Change Password
+                    </button>
+
                     {!contextMenu.user.cpanelEnabled ? (
                         <>
                             <div className="my-1 border-t border-border" />
@@ -1252,8 +1338,95 @@ export default function UsersRoute() {
                 </div>
             )}
 
+            {/* Change Password Modal */}
+            {changePasswordOpen && changePasswordTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+                    <form onSubmit={handleChangePassword} className="w-full max-w-md border border-border bg-card shadow-lg">
+                        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                            <div>
+                                <h3 className="text-sm font-semibold">Change Password</h3>
+                                <p className="mt-1 font-mono text-xs text-muted-foreground">{changePasswordTarget.username}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setChangePasswordOpen(false)}
+                                disabled={changePasswordSaving}
+                                aria-label="Close"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <div className="space-y-4 p-5">
+                            {changePasswordSuccess ? (
+                                <div className="flex items-center gap-3 rounded-none bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle className="h-5 w-5 shrink-0" />
+                                    <span>Password changed successfully.</span>
+                                </div>
+                            ) : (
+                                <>
+                                    <p className="text-xs leading-5 text-muted-foreground">
+                                        Set a new Linux account password for this user.
+                                    </p>
+                                    <label className="block space-y-1.5 text-xs font-medium">
+                                        <div className="flex items-center justify-between">
+                                            <span>New Password</span>
+                                            <button type="button" onClick={generateChangePassword} className="text-xs text-primary hover:underline">
+                                                Generate password
+                                            </button>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type={changePasswordShow ? "text" : "password"}
+                                                value={changePasswordValue}
+                                                onChange={(e) => setChangePasswordValue(e.target.value)}
+                                                className="h-9 w-full border border-input bg-background px-3 pr-10 text-sm outline-none focus:border-primary"
+                                                autoComplete="new-password"
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setChangePasswordShow((v) => !v)}
+                                                className="absolute right-3 top-2.5 text-muted-foreground"
+                                            >
+                                                {changePasswordShow ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                            </button>
+                                        </div>
+                                    </label>
+                                    <label className="block space-y-1.5 text-xs font-medium">
+                                        <span>Confirm Password</span>
+                                        <input
+                                            type={changePasswordShow ? "text" : "password"}
+                                            value={changePasswordConfirm}
+                                            onChange={(e) => setChangePasswordConfirm(e.target.value)}
+                                            className="h-9 w-full border border-input bg-background px-3 text-sm outline-none focus:border-primary"
+                                            autoComplete="new-password"
+                                            required
+                                        />
+                                    </label>
+                                    {changePasswordError ? (
+                                        <p className="text-xs text-destructive">{changePasswordError.trim()}</p>
+                                    ) : null}
+                                </>
+                            )}
+                        </div>
+                        <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
+                            <Button type="button" variant="outline" onClick={() => setChangePasswordOpen(false)} disabled={changePasswordSaving}>
+                                {changePasswordSuccess ? "Close" : "Cancel"}
+                            </Button>
+                            {!changePasswordSuccess && (
+                                <Button type="submit" className="gap-2" disabled={changePasswordSaving}>
+                                    {changePasswordSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                                    Change Password
+                                </Button>
+                            )}
+                        </div>
+                    </form>
+                </div>
+            )}
+
             {/* User Limits Modal */}
             {limitsModalOpen && selectedUser && (
+
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
                     <div className="relative w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl space-y-4">
                         <div className="flex items-center justify-between border-b border-border pb-3">

@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import ColorModeSwitch from "_components/color-mode-switch";
 import { AlertTriangle, Boxes, User, Menu, RefreshCw, X } from "lucide-react";
@@ -267,9 +268,9 @@ function UpdateModal({
         info?.remoteBuildTime,
     );
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 px-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-md border border-border bg-card text-card-foreground shadow-lg">
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/70 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-md border border-border bg-card text-card-foreground shadow-2xl">
                 <div className="flex items-center justify-between border-b border-border px-5 py-4">
                     <div className="flex items-center gap-3">
                         <span className="flex h-9 w-9 items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -388,7 +389,8 @@ function UpdateModal({
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body,
     );
 }
 
