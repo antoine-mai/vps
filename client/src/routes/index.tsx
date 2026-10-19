@@ -6,6 +6,7 @@ import { runtime } from "../runtime";
 import AgentRoute from "./agent";
 import AppsRoute from "./apps";
 import ContainersRoute from "./containers";
+import DockerContainersRoute from "./docker";
 import APIsRoute from "./apis";
 import FilesRoute from "./files";
 import LoginRoute from "./login";
@@ -38,7 +39,7 @@ export default function AppRoutes() {
             <Route path="/files" element={<ProtectedRoute><FilesRoute /></ProtectedRoute>} />
             <Route path="/vhosts" element={<ProtectedRoute><VHostsRoute /></ProtectedRoute>} />
             <Route path="/apps" element={<ProtectedRoute><ContainersRoute /></ProtectedRoute>} />
-            <Route path="/containers" element={<ProtectedRoute><ContainersRoute /></ProtectedRoute>} />
+            <Route path="/containers" element={<ProtectedRoute><DockerContainersRoute /></ProtectedRoute>} />
             <Route path="/tasking" element={<ProtectedRoute><TaskingRoute /></ProtectedRoute>} />
             <Route path="/backup" element={<ProtectedRoute><BackupRoute /></ProtectedRoute>} />
             <Route path="/agent" element={<ProtectedRoute><AgentRoute /></ProtectedRoute>} />
@@ -47,7 +48,6 @@ export default function AppRoutes() {
                 <>
                     <Route path="/vhosts/:owner" element={<ProtectedRoute><VHostsRoute /></ProtectedRoute>} />
                     <Route path="/apps/:owner" element={<ProtectedRoute><ContainersRoute /></ProtectedRoute>} />
-                    <Route path="/containers/:owner" element={<ProtectedRoute><ContainersRoute /></ProtectedRoute>} />
                     <Route path="/tasking/:owner" element={<ProtectedRoute><TaskingRoute /></ProtectedRoute>} />
                     <Route path="/settings" element={<ProtectedRoute><SettingsRoute /></ProtectedRoute>} />
                     <Route path="/settings/:section" element={<ProtectedRoute><SettingsRoute /></ProtectedRoute>} />

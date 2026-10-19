@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import {
     AppWindow,
     Box,
@@ -494,10 +494,8 @@ function ContainersUserStandalone() {
 // ─── Root Standalone with 220px Subsidebar ───────────────────────────────────
 
 function ContainersStandalone() {
-    const location = useLocation();
     const { owner: ownerParam } = useParams<{ owner?: string }>();
-    const isContainersView = location.pathname === "/containers" || location.pathname.startsWith("/containers/");
-    const activeOwner = ownerParam || (isContainersView ? "root" : "all");
+    const activeOwner = ownerParam || "all";
 
     const [users, setUsers] = useState<LinuxUser[]>([]);
     const [usersOpen, setUsersOpen] = useState(true);
@@ -553,34 +551,10 @@ function ContainersStandalone() {
     }, [allContainers]);
 
     return (
-        <DashboardLayout title={isContainersView ? "Containers" : "Apps"} fullWidth>
+        <DashboardLayout title="Apps" fullWidth>
             <div className="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[220px_1fr]">
                 {/* Subsidebar */}
                 <aside className="flex h-full flex-col overflow-y-auto border-r border-border bg-card/60">
-                    {/* System Containers Link */}
-                    <Link
-                        to="/containers"
-                        className={`flex items-center justify-between border-b border-border px-3 py-3 text-xs font-semibold transition-colors ${
-                            activeOwner === "root"
-                                ? "bg-primary/10 text-primary"
-                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        }`}
-                    >
-                        <span className="flex items-center gap-2">
-                            <Box className="h-4 w-4 shrink-0" />
-                            System Containers
-                        </span>
-                        <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                                activeOwner === "root"
-                                    ? "bg-primary/20 text-primary"
-                                    : "bg-muted text-muted-foreground"
-                            }`}
-                        >
-                            {containersByOwner["root"] || 0}
-                        </span>
-                    </Link>
-
                     {/* All Apps Link */}
                     <Link
                         to="/apps"
@@ -756,6 +730,7 @@ export function ContainersContent({
     const [resetModalOpen, setResetModalOpen] = useState(false);
 
     // Create container modal state
+    // Note: Container MUST run under non-root user!
     const effectiveDefaultOwner = useMemo(() => {
         if (!runtime.isRoot) {
             return runtime.username || "";
@@ -763,7 +738,7 @@ export function ContainersContent({
         if (activeOwner && activeOwner !== "all") {
             return activeOwner;
         }
-        return users[0]?.username || "root";
+        return users[0]?.username || "";
     }, [activeOwner, users]);
 
     const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -1024,8 +999,8 @@ export function ContainersContent({
         }
 
         const selectedOwner = runtime.isRoot ? createOwner : (runtime.username || "");
-        if (!selectedOwner || (!runtime.isRoot && selectedOwner === "root")) {
-            setCreateError("A valid user must be selected as the app owner.");
+        if (!selectedOwner || selectedOwner === "root") {
+            setCreateError("A non-root user must be selected as the app owner.");
             return;
         }
 
@@ -1535,11 +1510,9 @@ export function ContainersContent({
                         <div className="flex items-center gap-2">
                             <h2 className="text-base font-semibold text-foreground">
                                 {runtime.isRoot
-                                    ? activeOwner === "root"
-                                        ? "System Containers (Docker)"
-                                        : activeOwner === "all"
-                                            ? "All Apps"
-                                            : `Apps: ${activeOwner}`
+                                    ? activeOwner === "all"
+                                        ? "All Apps"
+                                        : `Apps: ${activeOwner}`
                                     : "Apps"}
                             </h2>
                             {userLimits && userLimits.maxContainers > 0 && (
@@ -1557,11 +1530,9 @@ export function ContainersContent({
                         <p className="mt-0.5 text-xs text-muted-foreground">
                             {displayedContainers.length} of {scopedContainers.length} app{scopedContainers.length !== 1 ? "s" : ""}
                             {runtime.isRoot
-                                ? activeOwner === "root"
-                                    ? " managed via Docker"
-                                    : activeOwner === "all"
-                                        ? " across all users"
-                                        : ` owned by ${activeOwner}`
+                                ? activeOwner === "all"
+                                    ? " across all users"
+                                    : ` owned by ${activeOwner}`
                                 : ""}
                         </p>
                     </div>
@@ -1658,11 +1629,9 @@ export function ContainersContent({
                     <p className="mt-1 text-xs text-muted-foreground">
                         {searchTerm
                             ? "No apps match your search filter."
-                            : activeOwner === "root"
-                                ? "System Docker containers will appear here."
-                                : activeOwner && activeOwner !== "all"
-                                    ? `No applications found for user "${activeOwner}".`
-                                    : "Rootless applications created under user accounts will appear here."}
+                            : activeOwner && activeOwner !== "all"
+                                ? `No applications found for user "${activeOwner}".`
+                                : "Rootless applications created under user accounts will appear here."}
                     </p>
                     <Button size="sm" className="mt-4 gap-2 text-xs" onClick={openCreateModal}>
                         <Plus className="h-3.5 w-3.5" />
@@ -1837,25 +1806,30 @@ export function ContainersContent({
                                         />
                                     </div>
 
-                                    {/* App Owner */}
+                                    {/* App Owner (Non-root users only) */}
                                     {runtime.isRoot && (
                                         <div className="space-y-1.5">
                                             <label className="text-xs font-semibold text-foreground">
                                                 App Owner <span className="text-destructive">*</span>
                                             </label>
-                                            <select
-                                                value={createOwner}
-                                                onChange={(e) => setCreateOwner(e.target.value)}
-                                                required
-                                                className="h-9 w-full rounded border border-input bg-background px-2.5 font-mono text-xs outline-none focus:border-primary"
-                                            >
-                                                <option value="root">root (System - Docker)</option>
-                                                {users.map((u) => (
-                                                    <option key={u.username} value={u.username}>
-                                                        {u.username} (Podman)
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            {users.length === 0 ? (
+                                                <div className="rounded border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                                                    No non-root users found. Apps must run under a user account.
+                                                </div>
+                                            ) : (
+                                                <select
+                                                    value={createOwner}
+                                                    onChange={(e) => setCreateOwner(e.target.value)}
+                                                    required
+                                                    className="h-9 w-full rounded border border-input bg-background px-2.5 font-mono text-xs outline-none focus:border-primary"
+                                                >
+                                                    {users.map((u) => (
+                                                        <option key={u.username} value={u.username}>
+                                                            {u.username}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
                                         </div>
                                     )}
                                 </div>

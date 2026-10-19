@@ -190,7 +190,7 @@ func (s *ContainerService) SetLimitsService(limits *UserLimitsService) {
 }
 
 func (s *ContainerService) ListAll() []Container {
-	result := s.listRootContainers()
+	var result []Container
 	users, _ := HomeUsers()
 
 	var mu sync.Mutex

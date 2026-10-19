@@ -28,10 +28,12 @@ This file is for handoff between agents. Keep entries concise, factual, and newe
 - Goal: Install Docker concurrently with Podman (Podman rootless for users, Docker for system/root services), configure root directory structure matching standard users (`/root/htdocs`, `/root/backup`, `/root/logs`, `/root/data`, `/root/config`), update installer with `--reinstall` safety (do not stop or wipe user services/data), and add "Containers" sidebar navigation item for managing root system Docker containers.
 - Files changed:
   - `public/install.sh`: Added `install_docker()` alongside `install_podman()`, added `configure_root_directories()` to set up `/root/{htdocs,backup,logs,data,config}`; adjusted `cleanup_old_install()` so `--reinstall` only restarts `mthan-vps@root.service` and never stops or wipes user instances or directories.
-  - `services/containers.go`: Added Docker integration for UID 0/root (`docker ps -a`, `docker inspect`, `docker logs`, `docker rm -f`, `docker run`), scanning `/root/htdocs` for container definitions and Dockerfiles.
+  - `services/containers.go`: Added Docker integration for UID 0/root (`docker ps -a`, `docker inspect`, `docker logs`, `docker rm -f`, `docker run`), scanning `/root/htdocs` for container definitions and Dockerfiles; ensured `ListAll()` strictly lists user apps, while `ListForOwner("root")` handles root Docker containers.
   - `services/containers_test.go`: Added `TestParseDockerContainers`.
   - `client/src/_layouts/_components/sidebar.tsx`: Added "Containers" item (`/containers`) for root.
-  - `client/src/routes/containers/index.tsx`: Updated route and subsidebar to handle `/containers` with default `activeOwner = "root"`, displaying "System Containers" link with root container badge count, and updated Create Modal to permit selecting `root (System - Docker)` as owner.
+  - `client/src/routes/docker/index.tsx`: Created independent layout and page for Docker System Containers exclusively for root (no user list, no subsidebar, dedicated stats, Docker container actions, logs, Dockerfile viewer, and create container modal with no owner selection).
+  - `client/src/routes/containers/index.tsx`: Reverted back to strictly managing user apps (Podman rootless) with the user subsidebar.
+  - `client/src/routes/index.tsx`: Mapped `/containers` directly to `DockerContainersRoute`, removed `/containers/:owner`.
   - `client/build/*`: Rebuilt frontend static assets.
 - Validation: Go test suite passed (`go test -v ./...`), binary compiled cleanly (`go build -buildvcs=false .`), and client built without errors (`npm run build`).
 
