@@ -120,7 +120,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
                 }
                 setUpdateSuccess(true);
                 setUpdateAvailable(false);
-                for (let seconds = 10; seconds > 0; seconds -= 1) {
+                for (let seconds = 5; seconds > 0; seconds -= 1) {
                     setReloadCountdown(seconds);
                     await delay(1000);
                 }
@@ -141,7 +141,7 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
     return (
         <header className="flex h-14 items-center justify-between border-b border-border bg-card pr-6">
             <div className="flex h-full min-w-0 items-center">
-                <div className="relative flex h-full shrink-0 items-center justify-center border-r border-border px-4 md:w-[280px] md:px-6">
+                <div className="relative flex h-full shrink-0 items-center justify-center border-r border-border px-4 md:w-[200px] md:px-4">
                     {onMenuClick && (
                         <button
                             onClick={onMenuClick}

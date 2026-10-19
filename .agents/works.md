@@ -23,6 +23,15 @@ This file is for handoff between agents. Keep entries concise, factual, and newe
 
 ## Work Entries
 
+### 2026-10-19 - Align VHosts sidebar width with header title box (200px)
+
+- Goal: Reduce the header title box width and VHosts subsidebar width to 200px so their right borders align seamlessly.
+- Files changed:
+  - `client/src/_layouts/_components/header.tsx`: Reduced header title container from `md:w-[280px] md:px-6` to `md:w-[200px] md:px-4`; reduced update countdown timer to 5s.
+  - `client/src/routes/vhosts/index.tsx`: Changed subsidebar grid column from `md:grid-cols-[220px_1fr]` to `md:grid-cols-[200px_1fr]`.
+  - `client/build/*`: Rebuilt frontend static assets.
+- Validation: Frontend build passed (`npm run build`), Go tests passed (`go test ./...`), and binary compiled cleanly.
+
 ### 2026-10-19 - Concurrent Docker & Podman installation and system container management
 
 - Goal: Install Docker concurrently with Podman (Podman rootless for users, Docker for system/root services), configure root directory structure matching standard users (`/root/htdocs`, `/root/backup`, `/root/logs`, `/root/data`, `/root/config`), update installer with `--reinstall` safety (do not stop or wipe user services/data), and add "Containers" sidebar navigation item for managing root system Docker containers.
