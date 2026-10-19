@@ -7,6 +7,7 @@ import {
     FileCode2,
     Globe,
     Loader2,
+    Lock,
     Pencil,
     Plus,
     RefreshCw,
@@ -825,15 +826,27 @@ function CreateVHostModal({
                     ) : null}
 
                     {/* Owner (if Root) */}
-                    {runtime.isRoot && users.length > 0 && (
+                    {runtime.isRoot && (users.length > 0 || defaultOwner) && (
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-foreground">Owner</label>
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-medium text-foreground">Owner</label>
+                                {defaultOwner && (
+                                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                        <Lock className="h-3 w-3" />
+                                        Locked to current user
+                                    </span>
+                                )}
+                            </div>
                             <select
                                 value={owner}
                                 onChange={(e) => setOwner(e.target.value)}
-                                className="h-9 w-full rounded border border-input bg-background px-3 font-mono text-xs outline-none focus:border-primary"
+                                disabled={Boolean(defaultOwner)}
+                                className="h-9 w-full rounded border border-input bg-background px-3 font-mono text-xs outline-none focus:border-primary disabled:cursor-not-allowed disabled:bg-muted/40 disabled:text-muted-foreground"
                             >
                                 <option value="root">root (system)</option>
+                                {defaultOwner && defaultOwner !== "root" && !users.some((u) => u.username === defaultOwner) && (
+                                    <option value={defaultOwner}>{defaultOwner}</option>
+                                )}
                                 {users.map((u) => (
                                     <option key={u.username} value={u.username}>
                                         {u.username}

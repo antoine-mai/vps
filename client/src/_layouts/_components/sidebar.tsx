@@ -13,6 +13,7 @@ import {
     AppWindow,
     Archive,
     CalendarClock,
+    Box,
 } from "lucide-react";
 import { useUser } from "../../_contexts/user";
 import { runtime } from "../../runtime";
@@ -33,6 +34,7 @@ export default function Sidebar({ className = "", isTerminalOpen, onTerminalTogg
         ...(runtime.isRoot ? [{ icon: Users, label: "Users", href: "/users" }] : []),
         { icon: Globe, label: "VHosts", href: "/vhosts" },
         { icon: AppWindow, label: "Apps", href: "/apps" },
+        ...(runtime.isRoot ? [{ icon: Box, label: "Containers", href: "/containers" }] : []),
         { icon: CalendarClock, label: "Tasking", href: "/tasking" },
         { icon: Folder, label: "Files", href: "/files" },
         { icon: Archive, label: "Backup", href: "/backup" },
@@ -64,10 +66,12 @@ export default function Sidebar({ className = "", isTerminalOpen, onTerminalTogg
             <nav className="flex-1 flex flex-col items-center gap-4 px-2 py-6">
                 {topMenuItems.map((item) => {
                     const Icon = item.icon;
+                    const isContainers = item.href === "/containers" && (location.pathname === "/containers" || location.pathname.startsWith("/containers/"));
+                    const isApps = item.href === "/apps" && (location.pathname === "/apps" || location.pathname.startsWith("/apps/"));
                     const isActive =
-                        location.pathname === item.href ||
-                        (item.href !== "/" && location.pathname.startsWith(`${item.href}/`)) ||
-                        (item.href === "/apps" && (location.pathname === "/containers" || location.pathname.startsWith("/containers/")));
+                        isContainers ||
+                        isApps ||
+                        (item.href !== "/apps" && item.href !== "/containers" && (location.pathname === item.href || (item.href !== "/" && location.pathname.startsWith(`${item.href}/`))));
                     return (
                         <Link
                             key={item.label}

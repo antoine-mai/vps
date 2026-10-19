@@ -11,14 +11,23 @@ import (
 
 func Handler(sessions *services.SessionService, vhosts *services.VHostService) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/post/vhost"), "/")
+		if path == "/create" {
+			if r.Method != http.MethodPost {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			handleCreate(w, r, sessions, vhosts)
+			return
+		}
+
 		if _, ok := sessions.GetRootSession(r); !ok {
 			http.Error(w, "session invalid", http.StatusUnauthorized)
 			return
 		}
 
-		path := strings.TrimPrefix(r.URL.Path, "/post/vhost")
 		switch path {
-		case "", "/":
+		case "":
 			writeJSON(w, vhosts.Status())
 		case "/list":
 			owner := r.URL.Query().Get("owner")
@@ -27,28 +36,7 @@ func Handler(sessions *services.SessionService, vhosts *services.VHostService) h
 			} else {
 				writeJSON(w, map[string]any{"vhosts": vhosts.Summaries()})
 			}
-		case "/create":
-			if r.Method != http.MethodPost {
-				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-				return
-			}
-			var input services.CreateVHostInput
-			if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-				http.Error(w, "invalid request body", http.StatusBadRequest)
-				return
-			}
-			if strings.TrimSpace(input.Owner) == "" {
-				input.Owner = "root"
-			}
-			if err := vhosts.CreateVHost(input); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			writeJSON(w, map[string]any{
-				"status":   "ok",
-				"hostname": services.CleanHostname(input.Hostname),
-			})
-			return
+
 		case "/config":
 			owner := r.URL.Query().Get("owner")
 			configPath := "/etc/caddy/Caddyfile"
@@ -121,6 +109,37 @@ func Handler(sessions *services.SessionService, vhosts *services.VHostService) h
 			}
 			writeJSON(w, host)
 		}
+	})
+}
+
+func handleCreate(w http.ResponseWriter, r *http.Request, sessions *services.SessionService, vhosts *services.VHostService) {
+	_, isRoot := sessions.GetRootSession(r)
+	userSession, isUser := sessions.GetUserSession(r)
+	if !isRoot && !isUser {
+		http.Error(w, "session invalid", http.StatusUnauthorized)
+		return
+	}
+
+	var input services.CreateVHostInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if isUser && !isRoot {
+		input.Owner = userSession.Username
+	} else if strings.TrimSpace(input.Owner) == "" {
+		input.Owner = "root"
+	}
+
+	if err := vhosts.CreateVHost(input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	writeJSON(w, map[string]any{
+		"status":   "ok",
+		"hostname": services.CleanHostname(input.Hostname),
 	})
 }
 

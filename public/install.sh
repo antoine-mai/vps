@@ -154,6 +154,88 @@ install_caddy() {
   configure_caddy_users_dir
 }
 
+install_docker() {
+  if command -v docker > /dev/null 2>&1; then
+    echo "Docker is already installed: $(docker --version 2>/dev/null || true)"
+    systemctl enable --now docker 2>/dev/null || true
+    return
+  fi
+
+  echo "Installing Docker..."
+  local installed=0
+
+  if command -v apt-get > /dev/null 2>&1; then
+    apt-get update
+    if DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io; then
+      installed=1
+    fi
+  elif command -v dnf > /dev/null 2>&1; then
+    if dnf install -y docker-ce moby-engine || dnf install -y docker; then
+      installed=1
+    fi
+  elif command -v yum > /dev/null 2>&1; then
+    if yum install -y docker; then
+      installed=1
+    fi
+  elif command -v pacman > /dev/null 2>&1; then
+    if pacman -Sy --noconfirm --needed docker; then
+      installed=1
+    fi
+  fi
+
+  # Fallback to official docker installation script if package manager didn't install docker
+  if [[ "${installed}" -eq 0 ]] || ! command -v docker > /dev/null 2>&1; then
+    echo "Attempting official Docker convenience script..."
+    if command -v curl > /dev/null 2>&1; then
+      curl -fsSL https://get.docker.com | sh || true
+    elif command -v wget > /dev/null 2>&1; then
+      wget -qO- https://get.docker.com | sh || true
+    fi
+  fi
+
+  if command -v docker > /dev/null 2>&1; then
+    echo "Docker installed successfully: $(docker --version 2>/dev/null || true)"
+    systemctl enable --now docker 2>/dev/null || true
+  else
+    echo "Warning: Docker could not be installed automatically. Install it manually if needed." >&2
+  fi
+}
+
+install_podman() {
+  if command -v podman > /dev/null 2>&1; then
+    echo "Podman is already installed"
+    return
+  fi
+
+  echo "Installing Podman..."
+  local installed=0
+
+  if command -v apt-get > /dev/null 2>&1; then
+    apt-get update
+    if DEBIAN_FRONTEND=noninteractive apt-get install -y podman; then
+      installed=1
+    fi
+  elif command -v dnf > /dev/null 2>&1; then
+    if dnf install -y podman; then
+      installed=1
+    fi
+  elif command -v yum > /dev/null 2>&1; then
+    if yum install -y podman; then
+      installed=1
+    fi
+  elif command -v pacman > /dev/null 2>&1; then
+    if pacman -Sy --noconfirm --needed podman; then
+      installed=1
+    fi
+  fi
+
+  if [[ "${installed}" -eq 1 ]] && command -v podman > /dev/null 2>&1; then
+    echo "Podman installed successfully: $(podman --version 2>/dev/null || true)"
+  else
+    echo "Warning: Podman could not be installed automatically. Install it manually if needed." >&2
+  fi
+}
+
 install_rclone() {
   if command -v rclone >/dev/null 2>&1; then
     echo "rclone is already installed"
@@ -246,6 +328,15 @@ configure_home_mode() {
         chmod 755 "${home_dir}/htdocs" 2>/dev/null || true
       fi
     fi
+  done
+}
+
+configure_root_directories() {
+  echo "Configuring root directories (htdocs, backup, logs, data, config)..."
+  local root_home="/root"
+  for dir in htdocs backup logs data config; do
+    mkdir -p "${root_home}/${dir}"
+    chmod 755 "${root_home}/${dir}" 2>/dev/null || true
   done
 }
 
@@ -350,22 +441,22 @@ resolve_root_url() {
 cleanup_old_install() {
   echo "Cleaning up old installation..."
 
-  # Stop and disable active/loaded service instances of mthan-vps or old vps service
-  local units
-  units=$(
-    {
-      systemctl list-units --type=service --all --plain --no-legend --no-pager "${SERVICE_NAME}@*.service" "vps@*.service" 2>/dev/null | awk '{print $1}'
-      systemctl list-unit-files --type=service --no-legend --no-pager 2>/dev/null | awk '{print $1}'
-    } | grep -E "^(${SERVICE_NAME}|vps)@[^.]+\\.service$" | sort -u
+  # Stop and disable legacy vps@*.service instances if any
+  local legacy_units
+  legacy_units=$(
+    systemctl list-units --type=service --all --plain --no-legend --no-pager "vps@*.service" 2>/dev/null | awk '{print $1}' | grep -E "^vps@[^.]+\\.service$"
   ) || true
-  for unit in ${units}; do
+  for unit in ${legacy_units}; do
     if [[ -n "${unit}" ]]; then
-      echo "Stopping service: ${unit}"
+      echo "Stopping legacy service: ${unit}"
       systemctl stop "${unit}" || true
-      echo "Disabling service: ${unit}"
       systemctl disable "${unit}" || true
     fi
   done
+
+  # For mthan-vps: ONLY stop root service for update. DO NOT stop or disable user services!
+  echo "Stopping root service for reinstallation..."
+  systemctl stop "${SERVICE_NAME}@root.service" 2>/dev/null || true
 
   # Clean up service files
   rm -f "/etc/systemd/system/${SERVICE_NAME}@.service"
@@ -389,8 +480,11 @@ main() {
 
   install_libcrypt
   install_caddy
+  install_docker
+  install_podman
   install_rclone
   configure_home_mode
+  configure_root_directories
 
   if [[ "${REINSTALL}" == "1" ]]; then
     cleanup_old_install

@@ -23,6 +23,25 @@ This file is for handoff between agents. Keep entries concise, factual, and newe
 
 ## Work Entries
 
+### 2026-10-19 - Concurrent Docker & Podman installation and system container management
+
+- Goal: Install Docker concurrently with Podman (Podman rootless for users, Docker for system/root services), configure root directory structure matching standard users (`/root/htdocs`, `/root/backup`, `/root/logs`, `/root/data`, `/root/config`), update installer with `--reinstall` safety (do not stop or wipe user services/data), and add "Containers" sidebar navigation item for managing root system Docker containers.
+- Files changed:
+  - `public/install.sh`: Added `install_docker()` alongside `install_podman()`, added `configure_root_directories()` to set up `/root/{htdocs,backup,logs,data,config}`; adjusted `cleanup_old_install()` so `--reinstall` only restarts `mthan-vps@root.service` and never stops or wipes user instances or directories.
+  - `services/containers.go`: Added Docker integration for UID 0/root (`docker ps -a`, `docker inspect`, `docker logs`, `docker rm -f`, `docker run`), scanning `/root/htdocs` for container definitions and Dockerfiles.
+  - `services/containers_test.go`: Added `TestParseDockerContainers`.
+  - `client/src/_layouts/_components/sidebar.tsx`: Added "Containers" item (`/containers`) for root.
+  - `client/src/routes/containers/index.tsx`: Updated route and subsidebar to handle `/containers` with default `activeOwner = "root"`, displaying "System Containers" link with root container badge count, and updated Create Modal to permit selecting `root (System - Docker)` as owner.
+  - `client/build/*`: Rebuilt frontend static assets.
+- Validation: Go test suite passed (`go test -v ./...`), binary compiled cleanly (`go build -buildvcs=false .`), and client built without errors (`npm run build`).
+
+### 2026-10-18 - Lock VHost owner modal to current user
+
+- Goal: In root view, when viewing a specific user (e.g. `/users/:username/vhosts`), lock the Owner field in Create VHost modal to that user.
+- Files changed: `client/src/routes/vhosts/index.tsx`, `client/build/*`.
+- Important decisions: When `defaultOwner` is supplied (from `ownerFilter`), the Owner select element is disabled and shows a lock icon indicator ("Locked to current user"), preventing unintended assignment to root or another user while preserving `defaultOwner` in form submission.
+- Validation: `npm run build` passed cleanly; `git diff --check` passed.
+
 ### 2026-07-24 - Browser-scoped root login
 
 - Goal: Require the root password again after the browser session ends.

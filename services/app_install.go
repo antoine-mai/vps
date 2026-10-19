@@ -11,21 +11,25 @@ import (
 var appPackages = map[string]map[string][][]string{
 	"apt-get": {
 		"caddy":  {{"caddy"}},
+		"docker": {{"docker.io"}, {"docker-ce"}},
 		"podman": {{"podman"}},
 		"rclone": {{"rclone"}},
 	},
 	"dnf": {
 		"caddy":  {{"caddy"}},
+		"docker": {{"docker-ce"}, {"moby-engine"}, {"docker"}},
 		"podman": {{"podman"}},
 		"rclone": {{"rclone"}},
 	},
 	"yum": {
 		"caddy":  {{"caddy"}},
+		"docker": {{"docker"}, {"docker-ce"}},
 		"podman": {{"podman"}},
 		"rclone": {{"rclone"}},
 	},
 	"pacman": {
 		"caddy":  {{"caddy"}},
+		"docker": {{"docker"}},
 		"podman": {{"podman"}},
 		"rclone": {{"rclone"}},
 	},

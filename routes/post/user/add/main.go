@@ -96,6 +96,9 @@ func Handler(settings *services.SettingsService) http.Handler {
 			return
 		}
 
+		// Add to docker group if it exists — best-effort, ignore failure.
+		_ = exec.Command("usermod", "-aG", "docker", username).Run()
+
 		_ = services.CreateUserCaddyfile(username)
 
 		writeJSON(w, http.StatusOK, response{

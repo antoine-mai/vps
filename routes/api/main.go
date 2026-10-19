@@ -141,7 +141,7 @@ func Register(mux *http.ServeMux, deps Dependencies) {
 	if userLimitsSvc != nil && cronTaskSvc != nil {
 		mux.Handle("GET /api/user/limits", public(apilimits.Handler(deps.Sessions, userLimitsSvc, cronTaskSvc, containerSvc)))
 	}
-	vhostHandler := public(vhostroute.Handler(deps.Sessions, services.NewVHostService()))
+	vhostHandler := public(vhostroute.Handler(deps.Sessions, services.NewVHostService(), deps.PostBaseURL))
 	mux.Handle("GET /api/vhost", vhostHandler)
 	mux.Handle("GET /api/vhost/", vhostHandler)
 	mux.Handle("POST /api/vhost", vhostHandler)

@@ -145,7 +145,7 @@ func rootSessionOnly(sessions *services.SessionService, next http.Handler) http.
 		case r.Method == http.MethodOptions:
 			next.ServeHTTP(w, r)
 			return
-		case r.URL.Path == "/post/login", r.URL.Path == "/post/user/login", r.URL.Path == "/post/ping":
+		case r.URL.Path == "/post/login", r.URL.Path == "/post/user/login", r.URL.Path == "/post/ping", r.URL.Path == "/post/vhost/create", r.URL.Path == "/post/vhost/create/":
 			next.ServeHTTP(w, r)
 			return
 		}

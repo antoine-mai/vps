@@ -29,6 +29,26 @@ func TestParseRootPodmanContainers(t *testing.T) {
 	}
 }
 
+func TestParseDockerContainers(t *testing.T) {
+	// Test line-by-line JSON format (docker ps -a --format "{{json .}}")
+	outputLines := []byte(`{"ID":"dock123","Names":"/system-mysql","Image":"mysql:8","Command":"mysqld","State":"running","Status":"Up 2 hours","CreatedAt":"2026-10-19 10:00:00 +0000 UTC","Ports":"0.0.0.0:3306->3306/tcp"}
+{"ID":"dock456","Names":"system-redis","Image":"redis:alpine","Command":"docker-entrypoint.sh redis-server","State":"running","Status":"Up 3 hours","CreatedAt":"2026-10-19 09:00:00 +0000 UTC","Ports":"127.0.0.1:6379->6379/tcp"}
+`)
+	containers := parseDockerContainers(outputLines, "root")
+	if len(containers) != 2 {
+		t.Fatalf("got %d containers, want 2", len(containers))
+	}
+	if containers[0].Engine != "docker" || containers[0].Owner != "root" || containers[0].Name != "system-mysql" {
+		t.Fatalf("unexpected container: %#v", containers[0])
+	}
+	if !reflect.DeepEqual(containers[0].Ports, []string{"0.0.0.0:3306->3306/tcp"}) {
+		t.Fatalf("unexpected ports: %#v", containers[0].Ports)
+	}
+	if containers[1].Name != "system-redis" {
+		t.Fatalf("unexpected name: %s", containers[1].Name)
+	}
+}
+
 func TestParsePodmanContainers(t *testing.T) {
 	output := []byte(`[{
         "Id":"def456",
