@@ -29,6 +29,12 @@ type AppConfigService struct {
 
 func NewAppConfigService() *AppConfigService {
 	return &AppConfigService{allowed: map[string]map[string]bool{
+		"bind9": {
+			"/etc/bind/named.conf":         true,
+			"/etc/bind/named.conf.options": true,
+			"/etc/bind/named.conf.local":   true,
+			"/etc/named.conf":              true,
+		},
 		"caddy": {
 			"/etc/caddy/Caddyfile": true,
 		},

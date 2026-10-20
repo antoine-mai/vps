@@ -138,7 +138,7 @@ export default function SettingsRoute() {
 
     return (
         <DashboardLayout title="Settings" fullWidth>
-            <div className="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[280px_1fr]">
+            <div className="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[200px_1fr]">
                 <SettingsSidebar section={section} />
 
                 <main className="overflow-y-auto p-6">

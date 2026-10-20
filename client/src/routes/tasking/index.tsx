@@ -200,7 +200,7 @@ function TaskingStandalone() {
 
     return (
         <DashboardLayout title="Tasking" fullWidth>
-            <div className="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[220px_1fr]">
+            <div className="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[200px_1fr]">
                 {/* Subsidebar */}
                 <aside className="flex h-full flex-col overflow-y-auto border-r border-border bg-card/60">
                     {/* All Tasks Link */}

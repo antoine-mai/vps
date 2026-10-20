@@ -365,7 +365,7 @@ export default function FilesRoute({
             : rootLabel || (runtime.isRoot ? "/" : runtime.username);
 
     const content = (
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] overflow-hidden h-full w-full bg-background relative">
+        <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] overflow-hidden h-full w-full bg-background relative">
             {/* 1. Left Explorer Sidebar */}
             <aside className="border-r border-border bg-card/60 flex flex-col h-full overflow-hidden select-none">
                 <div className="flex h-10 items-center justify-between px-3 border-b border-border bg-muted/20">

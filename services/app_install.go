@@ -10,24 +10,28 @@ import (
 
 var appPackages = map[string]map[string][][]string{
 	"apt-get": {
+		"bind9":  {{"bind9", "bind9utils"}},
 		"caddy":  {{"caddy"}},
 		"docker": {{"docker.io"}, {"docker-ce"}},
 		"podman": {{"podman"}},
 		"rclone": {{"rclone"}},
 	},
 	"dnf": {
+		"bind9":  {{"bind", "bind-utils"}},
 		"caddy":  {{"caddy"}},
 		"docker": {{"docker-ce"}, {"moby-engine"}, {"docker"}},
 		"podman": {{"podman"}},
 		"rclone": {{"rclone"}},
 	},
 	"yum": {
+		"bind9":  {{"bind", "bind-utils"}},
 		"caddy":  {{"caddy"}},
 		"docker": {{"docker"}, {"docker-ce"}},
 		"podman": {{"podman"}},
 		"rclone": {{"rclone"}},
 	},
 	"pacman": {
+		"bind9":  {{"bind"}},
 		"caddy":  {{"caddy"}},
 		"docker": {{"docker"}},
 		"podman": {{"podman"}},
@@ -60,6 +64,10 @@ func InstallApp(name string) error {
 		if err == nil {
 			if name == "caddy" {
 				_ = EnsureCaddyMThanUsers()
+			}
+			if name == "bind9" {
+				_ = exec.Command("systemctl", "enable", "--now", "named.service").Run()
+				_ = exec.Command("systemctl", "enable", "--now", "bind9.service").Run()
 			}
 			return nil
 		}

@@ -15,13 +15,19 @@ func Handler(sessions *services.SessionService) http.Handler {
 		}
 		if r.Method == http.MethodPost {
 			var input struct {
-				Name string `json:"name"`
+				Name   string `json:"name"`
+				Action string `json:"action"`
 			}
 			if json.NewDecoder(r.Body).Decode(&input) != nil {
 				http.Error(w, "invalid request", http.StatusBadRequest)
 				return
 			}
-			if err := services.InstallApp(input.Name); err != nil {
+			if input.Action != "" {
+				if err := services.ControlService(input.Name, input.Action); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+			} else if err := services.InstallApp(input.Name); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}

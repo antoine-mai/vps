@@ -23,6 +23,24 @@ This file is for handoff between agents. Keep entries concise, factual, and newe
 
 ## Work Entries
 
+### 2026-10-20 - Align header module title and subsidebars & Add BIND 9 nameserver to settings
+
+- Goal:
+  1. Replace static app name in header title box with the active sidebar module title (Dashboard, Users, VHosts, Apps, Containers, Tasking, Files, Backup, Settings, APIs, Agent).
+  2. Standardize all subsidebar widths across the application to 200px (`md:grid-cols-[200px_1fr]`) so their right border aligns with the header title box's right border.
+  3. Add BIND 9 nameserver management to Settings under Apps with an "Active" (installation/activation) button and configuration viewers for `named.conf`, `named.conf.options`, and `named.conf.local`.
+- Files changed:
+  - `client/src/_layouts/dashboard.tsx`: Derived active module title dynamically based on the current route and passed it to `Header`. Added optional `headerTitle` prop override.
+  - `client/src/routes/settings/sidebar.tsx`: Added `bind9` (Nameserver) to `availableApps`.
+  - `client/src/routes/apps/index.tsx`: Registered `bind9` app with port 53; added "Active" button for uninstalled state; added BIND 9 configuration file cards; updated subsidebar grid to `200px`; hooked service action handler to backend.
+  - `client/src/routes/containers/index.tsx`, `client/src/routes/tasking/index.tsx`, `client/src/routes/settings/index.tsx`, `client/src/routes/root/users/index.tsx`, `client/src/routes/files/index.tsx`, `client/src/routes/agent/index.tsx`: Standardized subsidebar column widths to `200px` (`md:grid-cols-[200px_1fr]`).
+  - `services/apps.go`: Registered `bind9` in `knownApps` and added `ControlService` to manage systemctl services (start, stop, restart).
+  - `services/app_install.go`: Added `bind9` package mappings for apt-get, dnf, yum, and pacman; auto-enabled and started service on installation.
+  - `services/app_config.go`: Allowed editing `/etc/bind/named.conf`, `/etc/bind/named.conf.options`, `/etc/bind/named.conf.local`, and `/etc/named.conf`.
+  - `routes/post/apps/main.go`: Added support for service control actions (`start`, `stop`, `restart`) in addition to installation.
+  - `client/build/*`: Rebuilt frontend static assets.
+- Validation: Go tests passed (`go test ./...`), Go binary built cleanly, and frontend production build succeeded.
+
 ### 2026-10-20 - Auto-focus inputs on login forms (/login and /root/login)
 
 - Goal: Automatically focus the primary input field when entering the login forms (/login and /root/login).

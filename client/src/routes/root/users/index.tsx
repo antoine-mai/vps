@@ -550,7 +550,7 @@ export default function UsersRoute() {
             description="Manage local system accounts, home folders, shells, and system access."
             fullWidth={true}
         >
-            <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] h-[calc(100vh-56px)] overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] h-[calc(100vh-56px)] overflow-hidden">
                 {/* Left Sidebar - Users List */}
                 <aside className="border-r border-border bg-card/60 flex flex-col h-full overflow-hidden select-none">
                     <div className="flex h-10 items-center justify-between px-3 border-b border-border bg-muted/20">

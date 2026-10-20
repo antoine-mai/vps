@@ -4,6 +4,7 @@ import { Boxes, Cpu, Settings, User } from "lucide-react";
 export const availableApps = [
     ["caddy", "Caddy"],
     ["podman", "Podman"],
+    ["bind9", "Nameserver"],
 ] as const;
 
 type SettingsSection = "general" | "users" | "apps";

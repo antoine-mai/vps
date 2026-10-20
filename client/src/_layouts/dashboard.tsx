@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import { redirectToLogin, useUser } from "../_contexts/user";
 import Sidebar from "./_components/sidebar";
@@ -11,6 +12,7 @@ type DashboardLayoutProps = {
     children: ReactNode;
     description?: string;
     title: string;
+    headerTitle?: string;
     fullWidth?: boolean;
     wide?: boolean;
 };
@@ -20,6 +22,7 @@ function DashboardLayoutContent({
     children,
     description,
     title,
+    headerTitle,
     fullWidth,
     wide,
 }: DashboardLayoutProps) {
@@ -27,6 +30,24 @@ function DashboardLayoutContent({
     const { appName } = useApp();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     const { isOpen: isTerminalOpen, openRoot } = useTerminal();
+    const location = useLocation();
+
+    const getModuleTitle = () => {
+        if (headerTitle) return headerTitle;
+        const path = location.pathname;
+        if (path === "/" || path === "") return "Dashboard";
+        if (path.startsWith("/users")) return "Users";
+        if (path.startsWith("/vhosts")) return "VHosts";
+        if (path.startsWith("/apps")) return "Apps";
+        if (path.startsWith("/containers")) return "Containers";
+        if (path.startsWith("/tasking")) return "Tasking";
+        if (path.startsWith("/files")) return "Files";
+        if (path.startsWith("/backup")) return "Backup";
+        if (path.startsWith("/settings")) return "Settings";
+        if (path.startsWith("/agent")) return "Agent";
+        if (path.startsWith("/apis")) return "APIs";
+        return title || appName;
+    };
 
     useEffect(() => {
         if (!isCheckingSession && !isLoggedIn) {
@@ -70,7 +91,7 @@ function DashboardLayoutContent({
 
             {/* Main Content Area */}
             <div className="flex flex-1 flex-col overflow-hidden">
-                <Header title={appName} onMenuClick={() => setIsMobileOpen(true)} />
+                <Header title={getModuleTitle()} onMenuClick={() => setIsMobileOpen(true)} />
 
                 <div className="relative flex flex-1 flex-col overflow-hidden">
                     {fullWidth ? (

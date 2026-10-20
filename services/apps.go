@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 	"regexp"
 	"time"
@@ -25,6 +26,7 @@ type appDefinition struct {
 }
 
 var knownApps = []appDefinition{
+	{name: "bind9", binaries: []string{"named", "/usr/sbin/named", "/usr/bin/named"}, services: []string{"named.service", "bind9.service"}, versionArgs: []string{"-v"}},
 	{name: "caddy", binaries: []string{"caddy", "/usr/bin/caddy", "/usr/local/bin/caddy"}, services: []string{"caddy.service"}, versionArgs: []string{"version"}},
 	{name: "docker", binaries: []string{"docker", "/usr/bin/docker"}, services: []string{"docker.service", "docker.socket"}, versionArgs: []string{"--version"}},
 	{name: "podman", binaries: []string{"podman", "/usr/bin/podman", "/usr/local/bin/podman"}, versionArgs: []string{"--version"}},
@@ -101,4 +103,27 @@ func serviceStatus(names []string) (string, bool) {
 		return names[0], false
 	}
 	return "", false
+}
+
+func ControlService(name, action string) error {
+	for _, app := range knownApps {
+		if app.name == name {
+			if len(app.services) == 0 {
+				return errors.New("app has no manageable services")
+			}
+			svc, _ := serviceStatus(app.services)
+			if svc == "" {
+				svc = app.services[0]
+			}
+			switch action {
+			case "start", "stop", "restart":
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				return exec.CommandContext(ctx, "systemctl", action, svc).Run()
+			default:
+				return errors.New("unsupported action")
+			}
+		}
+	}
+	return errors.New("unknown app")
 }

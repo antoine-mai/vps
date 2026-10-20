@@ -76,6 +76,19 @@ export default function AppsRoute() {
             installed: false,
             manageable: false,
         },
+        {
+            id: "2",
+            name: "bind9",
+            displayName: "Nameserver",
+            serviceName: "named.service",
+            version: "System",
+            port: "53",
+            description: "Authoritative and recursive DNS nameserver daemon (BIND 9).",
+            running: false,
+            uptime: "Stopped",
+            installed: false,
+            manageable: true,
+        },
     ]);
 
     const [selectedApp, setSelectedApp] = useState<ServerApp | null>(apps[0]);
@@ -120,36 +133,31 @@ export default function AppsRoute() {
         loadStatuses();
     }, []);
 
-    const handleServiceAction = (id: string, action: "start" | "stop" | "restart") => {
+    const handleServiceAction = async (id: string, action: "start" | "stop" | "restart") => {
+        if (!selectedApp) return;
         setActionLoading(action);
-        setTimeout(() => {
-            setApps((prev) =>
-                prev.map((app) => {
-                    if (app.id === id) {
-                        const nextRunning = action === "restart" ? app.running : action === "start";
-                        return {
-                            ...app,
-                            running: nextRunning,
-                            uptime: nextRunning ? "Just started" : "Stopped",
-                        };
-                    }
-                    return app;
-                })
-            );
-            // Also update currently selected app details
-            setSelectedApp((prev) => {
-                if (prev && prev.id === id) {
-                    const nextRunning = action === "restart" ? prev.running : action === "start";
-                    return {
-                        ...prev,
-                        running: nextRunning,
-                        uptime: nextRunning ? "Just started" : "Stopped",
-                    };
-                }
-                return prev;
+        setStatusError("");
+        try {
+            const response = await fetch(Api.current.apps, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: selectedApp.name, action }),
             });
+            if (!response.ok) throw new Error((await response.text()) || `Failed to ${action} service`);
+            const data = await response.json();
+            setApps((current) =>
+                current.map((app) => ({
+                    ...app,
+                    ...(data.apps.find((status: ServerApp) => status.name === app.name) ?? {}),
+                })),
+            );
+            const status = data.apps.find((app: ServerApp) => app.name === selectedApp.name);
+            if (status) setSelectedApp((current) => (current ? { ...current, ...status } : current));
+        } catch (error) {
+            setStatusError(error instanceof Error ? error.message : `Failed to ${action} service`);
+        } finally {
             setActionLoading(null);
-        }, 800);
+        }
     };
 
     const installApp = async () => {
@@ -173,7 +181,7 @@ export default function AppsRoute() {
             title="Settings"
             fullWidth={true}
         >
-            <div className="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[280px_1fr]">
+            <div className="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[200px_1fr]">
                 <SettingsSidebar section="apps" app={selectedApp?.name} />
                 <main className="bg-background flex flex-col h-full overflow-hidden">
                     {selectedApp ? (
@@ -226,7 +234,7 @@ export default function AppsRoute() {
                                     {isRoot && !selectedApp.installed ? (
                                         <Button size="sm" className="gap-2" disabled={actionLoading !== null} onClick={installApp}>
                                             {actionLoading === "install" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                            Install
+                                            {selectedApp.name === "bind9" ? "Active" : "Install"}
                                         </Button>
                                     ) : null}
                                     {selectedApp.installed && selectedApp.manageable ? (
@@ -324,6 +332,65 @@ export default function AppsRoute() {
                                                 <p className="text-xs font-semibold text-foreground">Caddyfile</p>
                                                 <code className="mt-1 block break-all text-xs text-primary">/etc/caddy/Caddyfile</code>
                                                 <p className="mt-2 text-xs leading-5 text-muted-foreground">Global public host, TLS, reverse proxy, and route configuration.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            ) : null}
+
+                            {selectedApp.name === "bind9" ? (
+                                <section className="space-y-3">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-foreground">BIND 9 configuration</h3>
+                                        <p className="mt-1 text-xs text-muted-foreground">BIND 9 (named) is the system DNS nameserver operating on UDP/TCP port 53.</p>
+                                    </div>
+                                    <div className="grid gap-3 lg:grid-cols-2">
+                                        <div className="relative rounded-md border border-border bg-card p-4">
+                                            {isRoot ? (
+                                                <Button size="sm" variant="outline" className="absolute right-3 top-3 h-7 gap-1.5 px-2 text-xs" onClick={() => setConfigEditor({ app: "bind9", label: "named.conf", path: "/etc/bind/named.conf" })}>
+                                                    <Pencil className="h-3 w-3" />
+                                                    Edit
+                                                </Button>
+                                            ) : null}
+                                            <div className="flex items-start gap-3 pr-16">
+                                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"><FileCode2 className="h-4 w-4" /></span>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-semibold text-foreground">Main Named Configuration</p>
+                                                    <code className="mt-1 block break-all text-xs text-primary">/etc/bind/named.conf</code>
+                                                    <p className="mt-2 text-xs leading-5 text-muted-foreground">Primary BIND 9 configuration file and includes.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="relative rounded-md border border-border bg-card p-4">
+                                            {isRoot ? (
+                                                <Button size="sm" variant="outline" className="absolute right-3 top-3 h-7 gap-1.5 px-2 text-xs" onClick={() => setConfigEditor({ app: "bind9", label: "named.conf.options", path: "/etc/bind/named.conf.options" })}>
+                                                    <Pencil className="h-3 w-3" />
+                                                    Edit
+                                                </Button>
+                                            ) : null}
+                                            <div className="flex items-start gap-3 pr-16">
+                                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"><Settings2 className="h-4 w-4" /></span>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-semibold text-foreground">Named Options</p>
+                                                    <code className="mt-1 block break-all text-xs text-primary">/etc/bind/named.conf.options</code>
+                                                    <p className="mt-2 text-xs leading-5 text-muted-foreground">Global forwarders, listen ports, access control lists, and DNSSEC.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="relative rounded-md border border-border bg-card p-4">
+                                            {isRoot ? (
+                                                <Button size="sm" variant="outline" className="absolute right-3 top-3 h-7 gap-1.5 px-2 text-xs" onClick={() => setConfigEditor({ app: "bind9", label: "named.conf.local", path: "/etc/bind/named.conf.local" })}>
+                                                    <Pencil className="h-3 w-3" />
+                                                    Edit
+                                                </Button>
+                                            ) : null}
+                                            <div className="flex items-start gap-3 pr-16">
+                                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"><Network className="h-4 w-4" /></span>
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-semibold text-foreground">Local Zones</p>
+                                                    <code className="mt-1 block break-all text-xs text-primary">/etc/bind/named.conf.local</code>
+                                                    <p className="mt-2 text-xs leading-5 text-muted-foreground">Authoritative DNS zones and domain definitions hosted on this server.</p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
