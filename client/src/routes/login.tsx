@@ -1,4 +1,4 @@
-import { type FormEvent, useState, useEffect } from "react";
+import { type FormEvent, useState, useEffect, useRef } from "react";
 import {
     ArrowRight,
     Loader2,
@@ -248,6 +248,14 @@ function LoginForm({
     showUsername,
     status,
 }: LoginLayoutProps & { root?: boolean; showUsername: boolean }) {
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (!isLoading) {
+            inputRef.current?.focus();
+        }
+    }, [isLoading]);
+
     return (
         <form className="space-y-5" onSubmit={handleSubmit}>
             {showUsername && (
@@ -261,6 +269,8 @@ function LoginForm({
                                         aria-hidden="true"
                                     />
                                     <input
+                                        ref={inputRef}
+                                        autoFocus
                                         className="h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring"
                                         name="username"
                                         autoComplete="username"
@@ -282,6 +292,8 @@ function LoginForm({
                                         aria-hidden="true"
                                     />
                                     <input
+                                        ref={!showUsername ? inputRef : undefined}
+                                        autoFocus={!showUsername}
                                         className={`h-11 w-full rounded-md border pl-9 pr-3 text-sm outline-none transition-colors ${
                                             root
                                                 ? "border-zinc-700 bg-zinc-950 text-zinc-100 placeholder:text-zinc-600 focus:border-red-500 focus:ring-1 focus:ring-red-500"

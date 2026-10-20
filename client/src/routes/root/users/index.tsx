@@ -23,6 +23,7 @@ import {
     Globe,
     AppWindow,
     Archive,
+    Braces,
     CalendarClock,
     Sliders,
 } from "lucide-react";
@@ -36,6 +37,7 @@ import VHostsRoute from "../../vhosts";
 import ContainersRoute from "../../containers";
 import BackupRoute from "../../backup";
 import TaskingRoute from "../../tasking";
+import APIsRoute from "../../apis";
 
 interface LinuxUser {
     cpanelEnabled: boolean;
@@ -607,6 +609,7 @@ export default function UsersRoute() {
                                             <UserSubItem username={u.username} section="containers" active={activeSection === "containers"} icon={AppWindow} label="Apps" />
                                             <UserSubItem username={u.username} section="vhosts" active={activeSection === "vhosts"} icon={Globe} label="VHosts" />
                                             <UserSubItem username={u.username} section="tasking" active={activeSection === "tasking"} icon={CalendarClock} label="Tasking" />
+                                            <UserSubItem username={u.username} section="apis" active={activeSection === "apis"} icon={Braces} label="APIs" />
                                             <UserSubItem username={u.username} section="terminal" active={activeSection === "terminal"} icon={Terminal} label="Terminal" />
                                             <UserSubItem username={u.username} section="backup" active={activeSection === "backup"} icon={Archive} label="Backup" />
                                         </nav>
@@ -1038,6 +1041,10 @@ export default function UsersRoute() {
                                     <div className="space-y-4">
                                         <TaskingRoute embedded={true} username={selectedUser.username} key={selectedUser.username} />
                                     </div>
+                                ) : activeSection === "apis" ? (
+                                    <div className="space-y-4">
+                                        <APIsRoute embedded={true} owner={selectedUser.username} key={selectedUser.username} />
+                                    </div>
                                 ) : null}
                                 </div>
                             )}
@@ -1077,6 +1084,12 @@ export default function UsersRoute() {
                     </button>
                     <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={() => navigateFromContextMenu("vhosts")} role="menuitem">
                         <Globe className="h-3.5 w-3.5 text-muted-foreground" />VHosts
+                    </button>
+                    <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={() => navigateFromContextMenu("tasking")} role="menuitem">
+                        <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />Tasking
+                    </button>
+                    <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={() => navigateFromContextMenu("apis")} role="menuitem">
+                        <Braces className="h-3.5 w-3.5 text-muted-foreground" />APIs
                     </button>
                     <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={() => navigateFromContextMenu("terminal")} role="menuitem">
                         <Terminal className="h-3.5 w-3.5 text-muted-foreground" />Terminal
@@ -1527,10 +1540,10 @@ function AlertCircle({ className }: { className?: string }) {
     );
 }
 
-type UserSection = "overview" | "files" | "containers" | "vhosts" | "terminal" | "backup" | "tasking";
+type UserSection = "overview" | "files" | "containers" | "vhosts" | "terminal" | "backup" | "tasking" | "apis";
 
 function userSection(section?: string): UserSection {
-    return section === "files" || section === "containers" || section === "vhosts" || section === "terminal" || section === "backup" || section === "tasking" ? section : "overview";
+    return section === "files" || section === "containers" || section === "vhosts" || section === "terminal" || section === "backup" || section === "tasking" || section === "apis" ? section : "overview";
 }
 
 function UserSubItem({ username, section, active, icon: Icon, label }: {

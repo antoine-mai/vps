@@ -15,9 +15,17 @@ func Handler(sessions *services.SessionService, settings *services.SettingsServi
 			return
 		}
 
+		owner := strings.TrimSpace(r.URL.Query().Get("owner"))
+
 		switch r.Method {
 		case http.MethodGet:
-			keys, err := settings.APIKeys()
+			var keys []services.APIKey
+			var err error
+			if owner != "" && owner != "all" {
+				keys, err = settings.APIKeys(owner)
+			} else {
+				keys, err = settings.APIKeys()
+			}
 			if err != nil {
 				http.Error(w, "API keys could not be loaded", http.StatusInternalServerError)
 				return
@@ -27,12 +35,19 @@ func Handler(sessions *services.SessionService, settings *services.SettingsServi
 			var input struct {
 				AcceptedIPs []string `json:"acceptedIps"`
 				Name        string   `json:"name"`
+				Owner       string   `json:"owner"`
 			}
 			if json.NewDecoder(r.Body).Decode(&input) != nil {
 				http.Error(w, "invalid request body", http.StatusBadRequest)
 				return
 			}
-			key, secret, err := settings.CreateAPIKey(input.Name, input.AcceptedIPs)
+			keyOwner := "root"
+			if strings.TrimSpace(input.Owner) != "" {
+				keyOwner = strings.TrimSpace(input.Owner)
+			} else if owner != "" && owner != "all" {
+				keyOwner = owner
+			}
+			key, secret, err := settings.CreateAPIKey(input.Name, input.AcceptedIPs, keyOwner)
 			if err != nil {
 				http.Error(w, "API key could not be created", http.StatusBadRequest)
 				return

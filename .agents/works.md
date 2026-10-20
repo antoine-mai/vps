@@ -23,6 +23,24 @@ This file is for handoff between agents. Keep entries concise, factual, and newe
 
 ## Work Entries
 
+### 2026-10-20 - Auto-focus inputs on login forms (/login and /root/login)
+
+- Goal: Automatically focus the primary input field when entering the login forms (/login and /root/login).
+- Files changed:
+  - `client/src/routes/login.tsx`: Added `useRef` and `useEffect` autofocus behavior to `LoginForm`. For regular user login (`/login`), focuses the `username` input; for root console login (`/root/login`), focuses the `password` input.
+  - `client/build/*`: Rebuilt frontend static assets.
+- Validation: Frontend build passed (`npm --prefix client run build`), Go tests passed (`go test ./...`), and binary compiled cleanly.
+
+### 2026-10-20 - Add API management to root users section
+
+- Goal: Enable root to access and manage API keys for any user from the root Users portal (`/users/:username/apis`).
+- Files changed:
+  - `routes/post/apis/main.go`: Added support for `owner` query parameter in `GET` and `owner` field in `POST` payload, allowing root to filter API keys by owner and create API keys on behalf of users.
+  - `client/src/routes/apis/index.tsx`: Added `embedded` and `owner` props to `APIsRoute`, supporting scoped API key listing, creation, updates, and deletion.
+  - `client/src/routes/root/users/index.tsx`: Added `apis` to `UserSection`, added `APIs` sub-item navigation and context menu item, and rendered `<APIsRoute embedded owner={selectedUser.username} />`.
+  - `client/build/*`: Rebuilt frontend static assets.
+- Validation: Frontend build passed (`npm run build`), Go tests passed (`go test ./...`), and binary compiled cleanly.
+
 ### 2026-10-19 - Align VHosts sidebar width with header title box (200px)
 
 - Goal: Reduce the header title box width and VHosts subsidebar width to 200px so their right borders align seamlessly.
