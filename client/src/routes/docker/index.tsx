@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
     AlertCircle,
     Box,
     CheckCircle2,
+    Clock,
     FileCode2,
     FileText,
-    HardDrive,
+    Folder,
     Loader2,
+    Network,
     Play,
     Plus,
     RefreshCw,
     RotateCw,
     Search,
-    Server,
     Square,
     Terminal,
     Trash2,
@@ -41,7 +43,11 @@ export type DockerContainer = {
 };
 
 export default function DockerContainersRoute() {
+    const { id: routeId } = useParams<{ id?: string }>();
+    const navigate = useNavigate();
+
     const [containers, setContainers] = useState<DockerContainer[]>([]);
+    const [selectedId, setSelectedId] = useState<string | null>(routeId || null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
@@ -88,7 +94,8 @@ export default function DockerContainersRoute() {
                 throw new Error(text || "Failed to load Docker containers");
             }
             const data = await res.json();
-            setContainers(data.containers || []);
+            const loaded: DockerContainer[] = data.containers || [];
+            setContainers(loaded);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load Docker containers");
         } finally {
@@ -115,13 +122,26 @@ export default function DockerContainersRoute() {
         );
     }, [containers, searchTerm]);
 
-    // Stats
-    const stats = useMemo(() => {
-        const total = containers.length;
-        const running = containers.filter((c) => c.state === "running" || c.status?.toLowerCase().startsWith("up")).length;
-        const stopped = total - running;
-        return { total, running, stopped };
-    }, [containers]);
+    // Active selected container
+    const selectedContainer = useMemo(() => {
+        if (!containers.length) return null;
+        if (selectedId) {
+            const match = containers.find((c) => c.id === selectedId || c.name === selectedId);
+            if (match) return match;
+        }
+        if (routeId) {
+            const match = containers.find((c) => c.id === routeId || c.name === routeId);
+            if (match) return match;
+        }
+        return containers[0] || null;
+    }, [containers, selectedId, routeId]);
+
+    // Select container handler
+    const handleSelectContainer = (container: DockerContainer) => {
+        const id = container.id || container.name;
+        setSelectedId(id);
+        navigate(`/containers/${encodeURIComponent(id)}`, { replace: true });
+    };
 
     // Perform container action (start, stop, restart)
     const handleAction = async (container: DockerContainer, action: "start" | "stop" | "restart") => {
@@ -172,6 +192,8 @@ export default function DockerContainersRoute() {
             }
             setDeleteModal(null);
             await fetchContainers();
+            setSelectedId(null);
+            navigate("/containers", { replace: true });
         } catch (err) {
             alert(err instanceof Error ? err.message : "Failed to delete container");
         } finally {
@@ -318,6 +340,8 @@ export default function DockerContainersRoute() {
             setCreateVolumes([]);
             setCreateEnv([]);
             await fetchContainers();
+            setSelectedId(trimmedName);
+            navigate(`/containers/${encodeURIComponent(trimmedName)}`, { replace: true });
         } catch (err) {
             setCreateError(err instanceof Error ? err.message : "Failed to create Docker container");
         } finally {
@@ -339,301 +363,360 @@ export default function DockerContainersRoute() {
         );
     }
 
+    const isRunning =
+        selectedContainer &&
+        (selectedContainer.state === "running" || selectedContainer.status?.toLowerCase().startsWith("up"));
+    const selectedTargetId = selectedContainer ? selectedContainer.id || selectedContainer.name : "";
+    const isBusy = actionLoadingId === selectedTargetId;
+
     return (
         <DashboardLayout title="Containers" fullWidth>
-            <div className="flex h-full flex-col overflow-y-auto p-6 space-y-6">
-                {/* Header */}
-                <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <div className="flex items-center gap-2.5">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <Box className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h1 className="text-lg font-semibold text-foreground tracking-tight">Docker Containers</h1>
-                                    <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-500 border border-blue-500/20">
-                                        System (Root)
-                                    </span>
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    System services running on Docker engine from <code className="text-foreground font-mono">/root/htdocs</code>
-                                </p>
-                            </div>
+            <div className="grid h-full grid-cols-1 overflow-hidden md:grid-cols-[200px_1fr]">
+                {/* Left Subsidebar */}
+                <aside className="flex h-full flex-col overflow-hidden border-r border-border bg-card/60 select-none">
+                    {/* Header bar */}
+                    <div className="flex h-10 items-center justify-between border-b border-border bg-muted/20 px-3">
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                            <Box className="h-3.5 w-3.5" />
+                            Containers
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={fetchContainers}
+                                className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                title="Refresh containers"
+                                disabled={loading}
+                            >
+                                <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setCreateError("");
+                                    setCreateModalOpen(true);
+                                }}
+                                className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                title="Create Docker container"
+                            >
+                                <Plus className="h-3.5 w-3.5" />
+                            </button>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-                        <div className="relative min-w-[200px] flex-1 sm:flex-initial">
-                            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    {/* Search box */}
+                    <div className="border-b border-border p-2">
+                        <div className="relative">
+                            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
                             <input
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search containers..."
-                                className="h-8 w-full rounded-md border border-border bg-background pl-8 pr-3 text-xs outline-none focus:border-primary"
+                                placeholder="Search..."
+                                className="h-7 w-full rounded border border-border bg-background pl-6 pr-2 text-xs outline-none focus:border-primary"
                             />
                         </div>
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-2 h-8 text-xs"
-                            onClick={fetchContainers}
-                            disabled={loading}
-                        >
-                            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-                            Refresh
-                        </Button>
-
-                        <Button
-                            size="sm"
-                            className="gap-2 h-8 text-xs font-medium"
-                            onClick={() => {
-                                setCreateError("");
-                                setCreateModalOpen(true);
-                            }}
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            Create Container
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Summary Cards */}
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    <div className="rounded-lg border border-border bg-card p-3.5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-muted-foreground">Total Containers</span>
-                            <Server className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div className="mt-2 text-2xl font-bold text-foreground font-mono">{stats.total}</div>
                     </div>
 
-                    <div className="rounded-lg border border-border bg-card p-3.5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-muted-foreground">Running</span>
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        </div>
-                        <div className="mt-2 text-2xl font-bold text-emerald-500 font-mono">{stats.running}</div>
-                    </div>
+                    {/* Containers List */}
+                    <div className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
+                        {loading && containers.length === 0 ? (
+                            <div className="flex items-center justify-center py-10 text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            </div>
+                        ) : filteredContainers.length === 0 ? (
+                            <div className="p-4 text-center text-xs text-muted-foreground">
+                                {searchTerm ? "No matching containers" : "No containers"}
+                            </div>
+                        ) : (
+                            filteredContainers.map((c) => {
+                                const targetId = c.id || c.name;
+                                const isCurrent = (selectedContainer?.id || selectedContainer?.name) === targetId;
+                                const running = c.state === "running" || c.status?.toLowerCase().startsWith("up");
 
-                    <div className="rounded-lg border border-border bg-card p-3.5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-muted-foreground">Stopped</span>
-                            <Square className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div className="mt-2 text-2xl font-bold text-muted-foreground font-mono">{stats.stopped}</div>
+                                return (
+                                    <button
+                                        key={targetId}
+                                        type="button"
+                                        onClick={() => handleSelectContainer(c)}
+                                        className={`flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-xs transition-colors ${
+                                            isCurrent
+                                                ? "bg-primary/10 font-semibold text-primary"
+                                                : "text-foreground/80 hover:bg-muted hover:text-foreground"
+                                        }`}
+                                    >
+                                        <span
+                                            className={`h-2 w-2 shrink-0 rounded-full ${
+                                                running ? "animate-pulse bg-emerald-500" : "bg-zinc-400"
+                                            }`}
+                                        />
+                                        <div className="min-w-0 flex-1 truncate">
+                                            <div className="truncate font-medium">{c.name || targetId}</div>
+                                            <div className="truncate text-[10px] text-muted-foreground">
+                                                {c.image || "custom"}
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })
+                        )}
                     </div>
+                </aside>
 
-                    <div className="rounded-lg border border-border bg-card p-3.5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-muted-foreground">Host Directory</span>
-                            <HardDrive className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="mt-2 truncate font-mono text-xs font-medium text-foreground">/root/htdocs</div>
-                    </div>
-                </div>
+                {/* Right Details Area */}
+                <main className="flex h-full flex-col overflow-y-auto bg-background">
+                    {selectedContainer ? (
+                        <div className="flex-1 space-y-5 p-6">
+                            {/* Error Banner */}
+                            {error && (
+                                <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive">
+                                    <AlertCircle className="h-4 w-4 shrink-0" />
+                                    <span>{error}</span>
+                                </div>
+                            )}
 
-                {/* Error Banner */}
-                {error && (
-                    <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 shrink-0" />
-                        <span>{error}</span>
-                    </div>
-                )}
+                            {/* Header Section */}
+                            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                        <Box className="h-5 w-5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h2 className="text-lg font-bold tracking-tight text-foreground">
+                                                {selectedContainer.name}
+                                            </h2>
+                                            <span
+                                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                                    isRunning
+                                                        ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
+                                                        : "border border-border bg-muted text-muted-foreground"
+                                                }`}
+                                            >
+                                                {isRunning ? (
+                                                    <CheckCircle2 className="h-3 w-3" />
+                                                ) : (
+                                                    <Square className="h-3 w-3" />
+                                                )}
+                                                {selectedContainer.status || (isRunning ? "Running" : "Stopped")}
+                                            </span>
+                                            <span className="rounded border border-border bg-muted/60 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
+                                                Docker (Root)
+                                            </span>
+                                        </div>
+                                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                            <span>
+                                                Image: <code className="font-mono text-foreground">{selectedContainer.image || "custom"}</code>
+                                            </span>
+                                            {selectedContainer.id && (
+                                                <span>
+                                                    ID: <code className="font-mono text-foreground">{selectedContainer.id.slice(0, 12)}</code>
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
 
-                {/* Container List Table */}
-                {loading && containers.length === 0 ? (
-                    <div className="flex items-center justify-center py-20 text-muted-foreground">
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin text-primary" />
-                        <span className="text-xs">Loading Docker containers...</span>
-                    </div>
-                ) : filteredContainers.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16 text-center">
-                        <Box className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                        <p className="text-sm font-medium text-foreground">No Docker containers found</p>
-                        <p className="mt-1 text-xs text-muted-foreground max-w-sm">
-                            {searchTerm
-                                ? "No containers match your search filter."
-                                : "Deploy system Docker containers to run background services under /root/htdocs."}
-                        </p>
-                        <Button
-                            size="sm"
-                            className="mt-4 gap-2 text-xs"
-                            onClick={() => {
-                                setCreateError("");
-                                setCreateModalOpen(true);
-                            }}
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            Create Container
-                        </Button>
-                    </div>
-                ) : (
-                    <div className="overflow-hidden rounded-lg border border-border bg-card">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs">
-                                <thead className="border-b border-border bg-muted/40 font-medium text-muted-foreground">
-                                    <tr>
-                                        <th className="px-4 py-3">Container</th>
-                                        <th className="px-4 py-3">Image</th>
-                                        <th className="px-4 py-3">Status</th>
-                                        <th className="px-4 py-3">Ports</th>
-                                        <th className="px-4 py-3">Location</th>
-                                        <th className="px-4 py-3 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {filteredContainers.map((c) => {
-                                        const isRunning =
-                                            c.state === "running" || c.status?.toLowerCase().startsWith("up");
-                                        const targetId = c.id || c.name;
-                                        const isBusy = actionLoadingId === targetId;
+                                {/* Actions Toolbar */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {isRunning ? (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="gap-1.5 border-amber-500/20 text-xs text-amber-500 hover:bg-amber-500/10 hover:text-amber-600"
+                                            disabled={isBusy}
+                                            onClick={() => handleAction(selectedContainer, "stop")}
+                                        >
+                                            {isBusy ? (
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            ) : (
+                                                <Square className="h-3.5 w-3.5 fill-current" />
+                                            )}
+                                            Stop
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            size="sm"
+                                            className="gap-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700"
+                                            disabled={isBusy}
+                                            onClick={() => handleAction(selectedContainer, "start")}
+                                        >
+                                            {isBusy ? (
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            ) : (
+                                                <Play className="h-3.5 w-3.5 fill-current" />
+                                            )}
+                                            Start
+                                        </Button>
+                                    )}
 
-                                        return (
-                                            <tr key={targetId} className="hover:bg-muted/30 transition-colors">
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center gap-2.5">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1.5 text-xs"
+                                        disabled={isBusy}
+                                        onClick={() => handleAction(selectedContainer, "restart")}
+                                        title="Restart container"
+                                    >
+                                        <RotateCw className="h-3.5 w-3.5" />
+                                        Restart
+                                    </Button>
+
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1.5 text-xs"
+                                        onClick={() => handleOpenLogs(selectedContainer)}
+                                        title="View container logs"
+                                    >
+                                        <FileText className="h-3.5 w-3.5" />
+                                        Logs
+                                    </Button>
+
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1.5 text-xs"
+                                        onClick={() => handleOpenDockerfile(selectedContainer)}
+                                        title="Edit Dockerfile"
+                                    >
+                                        <FileCode2 className="h-3.5 w-3.5" />
+                                        Dockerfile
+                                    </Button>
+
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1.5 border-destructive/20 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                        disabled={isBusy}
+                                        onClick={() => setDeleteModal(selectedContainer)}
+                                        title="Delete container"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        Delete
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Details Grid */}
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {/* General Information */}
+                                <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+                                    <div className="flex items-center gap-2 border-b border-border pb-2.5">
+                                        <Box className="h-4 w-4 text-primary" />
+                                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                            General Information
+                                        </h3>
+                                    </div>
+                                    <div className="space-y-2.5 text-xs">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <span className="text-muted-foreground">Container Name</span>
+                                            <span className="font-mono font-medium text-foreground">{selectedContainer.name}</span>
+                                        </div>
+                                        <div className="flex items-start justify-between gap-4">
+                                            <span className="text-muted-foreground">Full ID</span>
+                                            <span className="break-all text-right font-mono text-[11px] text-foreground">
+                                                {selectedContainer.id || "—"}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-start justify-between gap-4">
+                                            <span className="text-muted-foreground">Image</span>
+                                            <span className="font-mono text-foreground">{selectedContainer.image || "custom"}</span>
+                                        </div>
+                                        <div className="flex items-start justify-between gap-4">
+                                            <span className="text-muted-foreground">Command</span>
+                                            <span className="break-all font-mono text-[11px] text-foreground">
+                                                {selectedContainer.command || "default"}
+                                            </span>
+                                        </div>
+                                        {selectedContainer.createdAt && (
+                                            <div className="flex items-start justify-between gap-4">
+                                                <span className="text-muted-foreground">Created</span>
+                                                <span className="flex items-center gap-1 font-mono text-[11px] text-foreground">
+                                                    <Clock className="h-3 w-3 text-muted-foreground" />
+                                                    {selectedContainer.createdAt}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Networking & Ports */}
+                                <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+                                    <div className="flex items-center gap-2 border-b border-border pb-2.5">
+                                        <Network className="h-4 w-4 text-primary" />
+                                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                            Networking & Ports
+                                        </h3>
+                                    </div>
+                                    <div>
+                                        {selectedContainer.ports && selectedContainer.ports.length > 0 ? (
+                                            <div className="space-y-2">
+                                                <p className="text-xs text-muted-foreground">Port Bindings (Host : Container):</p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {selectedContainer.ports.map((p, idx) => (
                                                         <span
-                                                            className={`h-2 w-2 rounded-full shrink-0 ${
-                                                                isRunning ? "bg-emerald-500 animate-pulse" : "bg-zinc-400"
-                                                            }`}
-                                                        />
-                                                        <div>
-                                                            <div className="font-semibold text-foreground flex items-center gap-1.5">
-                                                                <span>{c.name || targetId}</span>
-                                                            </div>
-                                                            {c.id && (
-                                                                <div className="font-mono text-[11px] text-muted-foreground">
-                                                                    {c.id.slice(0, 12)}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className="font-mono text-xs text-foreground bg-muted/50 px-2 py-0.5 rounded border border-border">
-                                                        {c.image || "custom"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span
-                                                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                                                            isRunning
-                                                                ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                                                                : "bg-muted text-muted-foreground border border-border"
-                                                        }`}
-                                                    >
-                                                        {c.status || (isRunning ? "Running" : "Stopped")}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {c.ports && c.ports.length > 0 ? (
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {c.ports.map((p, idx) => (
-                                                                <span
-                                                                    key={idx}
-                                                                    className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground"
-                                                                >
-                                                                    {p}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-muted-foreground">—</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className="font-mono text-[11px] text-muted-foreground">
-                                                        {c.path || `/root/htdocs/${c.name}`}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        {isRunning ? (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-7 w-7 text-muted-foreground hover:text-amber-500"
-                                                                title="Stop Container"
-                                                                disabled={isBusy}
-                                                                onClick={() => handleAction(c, "stop")}
-                                                            >
-                                                                {isBusy ? (
-                                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                                ) : (
-                                                                    <Square className="h-3.5 w-3.5" />
-                                                                )}
-                                                            </Button>
-                                                        ) : (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-7 w-7 text-muted-foreground hover:text-emerald-500"
-                                                                title="Start Container"
-                                                                disabled={isBusy}
-                                                                onClick={() => handleAction(c, "start")}
-                                                            >
-                                                                {isBusy ? (
-                                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                                ) : (
-                                                                    <Play className="h-3.5 w-3.5" />
-                                                                )}
-                                                            </Button>
-                                                        )}
-
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                                            title="Restart Container"
-                                                            disabled={isBusy}
-                                                            onClick={() => handleAction(c, "restart")}
+                                                            key={idx}
+                                                            className="rounded-md border border-border bg-muted/80 px-2.5 py-1 font-mono text-xs font-medium text-foreground"
                                                         >
-                                                            <RotateCw className="h-3.5 w-3.5" />
-                                                        </Button>
+                                                            {p}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">
+                                                No public port mappings configured for this container.
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
 
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                                            title="View Logs"
-                                                            onClick={() => handleOpenLogs(c)}
-                                                        >
-                                                            <FileText className="h-3.5 w-3.5" />
-                                                        </Button>
-
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                                            title="View / Edit Dockerfile"
-                                                            onClick={() => handleOpenDockerfile(c)}
-                                                        >
-                                                            <FileCode2 className="h-3.5 w-3.5" />
-                                                        </Button>
-
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                                            title="Delete Container"
-                                                            disabled={isBusy}
-                                                            onClick={() => setDeleteModal(c)}
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                {/* Filesystem & Locations */}
+                                <div className="space-y-3 rounded-lg border border-border bg-card p-4 md:col-span-2">
+                                    <div className="flex items-center gap-2 border-b border-border pb-2.5">
+                                        <Folder className="h-4 w-4 text-primary" />
+                                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                            Filesystem & Storage
+                                        </h3>
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-2 text-xs">
+                                        <div className="rounded border border-border/80 bg-muted/30 p-3">
+                                            <span className="text-[11px] font-medium text-muted-foreground">Working Directory</span>
+                                            <code className="mt-1 block font-mono text-xs text-primary break-all">
+                                                {selectedContainer.path || `/root/htdocs/${selectedContainer.name}`}
+                                            </code>
+                                        </div>
+                                        <div className="rounded border border-border/80 bg-muted/30 p-3">
+                                            <span className="text-[11px] font-medium text-muted-foreground">Dockerfile Location</span>
+                                            <code className="mt-1 block font-mono text-xs text-primary break-all">
+                                                {`/root/htdocs/${selectedContainer.name}/Dockerfile`}
+                                            </code>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        /* Empty state when no container is available */
+                        <div className="flex flex-1 flex-col items-center justify-center p-12 text-center">
+                            <Box className="mb-3 h-12 w-12 text-muted-foreground/40" />
+                            <h3 className="text-base font-semibold text-foreground">No Docker containers found</h3>
+                            <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+                                Deploy system Docker containers to run background services under /root/htdocs.
+                            </p>
+                            <Button
+                                size="sm"
+                                className="mt-4 gap-2 text-xs"
+                                onClick={() => {
+                                    setCreateError("");
+                                    setCreateModalOpen(true);
+                                }}
+                            >
+                                <Plus className="h-3.5 w-3.5" />
+                                Create Container
+                            </Button>
+                        </div>
+                    )}
+                </main>
             </div>
 
             {/* Create Container Modal */}
@@ -890,8 +973,8 @@ export default function DockerContainersRoute() {
             {/* Logs Modal */}
             {logsModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-                    <div className="relative w-full max-w-3xl rounded-xl border border-border bg-card p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-                        <div className="flex items-center justify-between border-b border-border pb-3 shrink-0">
+                    <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col space-y-4 rounded-xl border border-border bg-card p-6 shadow-2xl">
+                        <div className="flex shrink-0 items-center justify-between border-b border-border pb-3">
                             <div className="flex items-center gap-2">
                                 <Terminal className="h-5 w-5 text-primary" />
                                 <div>
@@ -922,10 +1005,10 @@ export default function DockerContainersRoute() {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-auto rounded-md bg-zinc-950 p-4 font-mono text-xs text-zinc-100 whitespace-pre-wrap">
+                        <div className="flex-1 overflow-auto rounded-md bg-zinc-950 p-4 font-mono text-xs whitespace-pre-wrap text-zinc-100">
                             {logsLoading ? (
                                 <div className="flex items-center justify-center py-10 text-muted-foreground">
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Loading logs...
                                 </div>
                             ) : (
@@ -939,8 +1022,8 @@ export default function DockerContainersRoute() {
             {/* Dockerfile Modal */}
             {dockerfileModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-                    <div className="relative w-full max-w-2xl rounded-xl border border-border bg-card p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-                        <div className="flex items-center justify-between border-b border-border pb-3 shrink-0">
+                    <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col space-y-4 rounded-xl border border-border bg-card p-6 shadow-2xl">
+                        <div className="flex shrink-0 items-center justify-between border-b border-border pb-3">
                             <div className="flex items-center gap-2">
                                 <FileCode2 className="h-5 w-5 text-primary" />
                                 <div>
@@ -968,10 +1051,10 @@ export default function DockerContainersRoute() {
                             </div>
                         )}
 
-                        <div className="flex-1 flex flex-col">
+                        <div className="flex flex-1 flex-col">
                             {dockerfileLoading ? (
                                 <div className="flex items-center justify-center py-10 text-muted-foreground">
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Loading Dockerfile...
                                 </div>
                             ) : (
@@ -980,12 +1063,12 @@ export default function DockerContainersRoute() {
                                     onChange={(e) => setDockerfileContent(e.target.value)}
                                     placeholder="# Dockerfile contents..."
                                     rows={14}
-                                    className="w-full flex-1 rounded border border-border bg-zinc-950 p-3 font-mono text-xs text-zinc-100 outline-none focus:border-primary resize-none"
+                                    className="w-full flex-1 resize-none rounded border border-border bg-zinc-950 p-3 font-mono text-xs text-zinc-100 outline-none focus:border-primary"
                                 />
                             )}
                         </div>
 
-                        <div className="flex items-center justify-end gap-2 border-t border-border pt-3 shrink-0">
+                        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border pt-3">
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -1011,14 +1094,14 @@ export default function DockerContainersRoute() {
             {/* Delete Modal */}
             {deleteModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-                    <div className="relative w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl space-y-4">
+                    <div className="relative w-full max-w-md space-y-4 rounded-xl border border-border bg-card p-6 shadow-2xl">
                         <div className="flex items-center gap-2.5 text-destructive">
                             <AlertCircle className="h-5 w-5" />
                             <h3 className="text-sm font-semibold">Delete Container</h3>
                         </div>
                         <p className="text-xs text-muted-foreground">
                             Are you sure you want to delete container{" "}
-                            <span className="font-semibold text-foreground font-mono">
+                            <span className="font-mono font-semibold text-foreground">
                                 {deleteModal.name || deleteModal.id}
                             </span>
                             ? This will stop and remove the Docker container and delete its directory{" "}

@@ -23,6 +23,18 @@ This file is for handoff between agents. Keep entries concise, factual, and newe
 
 ## Work Entries
 
+### 2026-10-21 - Modernize Docker Containers to subsidebar + details layout
+
+- Goal:
+  1. Remove the 4 static summary boxes (`Total Containers`, `Running`, `Stopped`, `Host Directory`) from the Docker Containers page.
+  2. Redesign the page into a subsidebar + details layout matching the standard 200px column layout (`md:grid-cols-[200px_1fr]`): container list on the left subsidebar, and detailed container view with action toolbar on the right.
+  3. Add `/containers/:id` route support for deep-linking.
+- Files changed:
+  - `client/src/routes/docker/index.tsx`: Replaced summary cards and table layout with a left 200px subsidebar (search filter, status indicators, refresh and create buttons, container item list) and a right details panel (container header, actions toolbar, general info, networking/port mappings, filesystem paths, and quick actions).
+  - `client/src/routes/index.tsx`: Added `/containers/:id` route.
+  - `client/build/*`: Rebuilt frontend static assets.
+- Validation: Frontend build succeeded (`npm --prefix client run build`), Go tests passed (`go test ./...`), and Go binary built cleanly.
+
 ### 2026-10-20 - Align header module title and subsidebars & Add BIND 9 nameserver to settings
 
 - Goal:

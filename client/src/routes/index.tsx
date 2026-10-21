@@ -40,6 +40,7 @@ export default function AppRoutes() {
             <Route path="/vhosts" element={<ProtectedRoute><VHostsRoute /></ProtectedRoute>} />
             <Route path="/apps" element={<ProtectedRoute><ContainersRoute /></ProtectedRoute>} />
             <Route path="/containers" element={<ProtectedRoute><DockerContainersRoute /></ProtectedRoute>} />
+            <Route path="/containers/:id" element={<ProtectedRoute><DockerContainersRoute /></ProtectedRoute>} />
             <Route path="/tasking" element={<ProtectedRoute><TaskingRoute /></ProtectedRoute>} />
             <Route path="/backup" element={<ProtectedRoute><BackupRoute /></ProtectedRoute>} />
             <Route path="/agent" element={<ProtectedRoute><AgentRoute /></ProtectedRoute>} />
