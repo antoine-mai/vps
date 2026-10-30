@@ -55,6 +55,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if startup.IsRoot {
+		updater.PodmanMigration = services.NewPodmanMigration(settings)
+		updater.PodmanMigration.Start(false)
+	}
+
 	routes.Register(mux, routes.Dependencies{
 		Auth:     auth,
 		ClientFS: clientFS,

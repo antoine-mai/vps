@@ -23,6 +23,29 @@ This file is for handoff between agents. Keep entries concise, factual, and newe
 
 ## Work Entries
 
+### 2026-10-31 - Automatic Podman migration after admin binary update
+
+- Root `mthan-vps` now runs the embedded existing-user Podman setup automatically after upgrade. Missing runtime dependencies use the app package installer; no dependency on the separately installed `mthanctl` version.
+- Added a versioned settings receipt, serialized background runs, failure status and retry after restart. A forced failed retry invalidates the prior success receipt.
+- The existing admin Update dialog shows setup progress/errors and provides Apply/Retry through root-protected GET/POST `/post/update/podman`. The dialog remains accessible when no binary update is available.
+- Tests cover once-only startup, concurrent requests, failed setup and retry after restart; full Go regression tests and production build pass. Local binaries/version metadata built with `scripts/build.sh --no-push`; not published or deployed to production.
+
+### 2026-10-30 - Podman-only containers and per-owner boot provisioning
+
+- Removed Docker installation/detection/execution; root and user container commands now use Podman with a clean owner-specific environment and owner checks before filesystem operations. Root aggregation includes root's store; regular users cannot target another store.
+- Renamed the root UI module to `client/src/routes/podman`; user `/containers` routes use the existing owner-scoped manager. Legacy `.app.json` container type names are normalized on read.
+- Added shared `internal/podman` setup, embedded in both app and `mthanctl podman-setup [username]`: system/user restart units, vendor-unit preservation, subordinate ID allocation, verified linger, user manager and boot enablement. Installer and app Podman installation use the same setup. New user creation reports setup failures; created accounts remain available for repair.
+- Default restart policy is always. Existing container policies and Docker containers are not auto-migrated. No real host service changes or production reboot were performed in this task.
+- Validation: full Go tests (HTTP loopback required sandbox escalation), focused setup/owner tests, shell syntax checks, frontend production build, app/control binary builds. Setup tests use mock systemd/usermod and temporary paths.
+
+### 2026-10-29 - Automatically provision Podman rootless containers.conf on user creation
+
+- Goal: Automatically create and configure `~/.config/containers/containers.conf` for rootless Podman when provisioning Linux users, with English comments and settings for systemd cgroup management, slirp4netns network namespace, log rotation, and stop timeout.
+- Files changed:
+  - `services/linux_users.go`: Added `DefaultUserContainersConfig` and `ProvisionUserContainersConfig(home string, uid, gid int)`; integrated containers config provisioning into `ProvisionUserHome`.
+  - `services/linux_user_home_test.go`: Added verification for `.config/containers/containers.conf` file creation, mode (0644), and content matching.
+
+
 ### 2026-10-21 - Modernize Docker Containers to subsidebar + details layout
 
 - Goal:

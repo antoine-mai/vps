@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"mthan/vps/internal/podman"
 	"mthan/vps/services"
 )
 
@@ -96,8 +97,11 @@ func Handler(settings *services.SettingsService) http.Handler {
 			return
 		}
 
-		// Add to docker group if it exists — best-effort, ignore failure.
-		_ = exec.Command("usermod", "-aG", "docker", username).Run()
+		if err := podman.SetupUser(username); err != nil {
+			// Keep the successfully created account; report the recoverable provisioning error.
+			http.Error(w, "user created, but Podman setup failed: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		_ = services.CreateUserCaddyfile(username)
 

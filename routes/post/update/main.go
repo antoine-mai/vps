@@ -63,3 +63,17 @@ func writeJSON(w http.ResponseWriter, statusCode int, payload any) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 }
+
+func PodmanSetupHandler(updateService *services.UpdateService) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		migration := updateService.PodmanMigration
+		if migration == nil {
+			http.Error(w, "Podman setup is unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		if r.Method == http.MethodPost {
+			migration.Start(true)
+		}
+		writeJSON(w, http.StatusOK, migration.Status())
+	})
+}

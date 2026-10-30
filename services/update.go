@@ -32,14 +32,15 @@ type UpdateCheckResult struct {
 }
 
 type UpdateService struct {
-	binaryURL      string
-	versionURL     string
-	httpClient     *http.Client
-	installPath    string
-	localVersion   string
-	localBuildTime string
-	cacheResult    *UpdateCheckResult
-	cacheExpires   time.Time
+	PodmanMigration *PodmanMigration
+	binaryURL       string
+	versionURL      string
+	httpClient      *http.Client
+	installPath     string
+	localVersion    string
+	localBuildTime  string
+	cacheResult     *UpdateCheckResult
+	cacheExpires    time.Time
 }
 
 func NewUpdateService(localVersion, localBuildTime string) *UpdateService {

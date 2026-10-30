@@ -90,12 +90,8 @@ export default function Header({ title, onMenuClick }: HeaderProps) {
         setUpdateSuccess(false);
         setReloadCountdown(0);
 
-        if (!updateAvailable) {
-            await checkUpdate();
-            return;
-        }
-
         setUpdateModalOpen(true);
+        await checkUpdate();
     };
 
     const confirmUpdate = async () => {
@@ -340,6 +336,8 @@ function UpdateModal({
                         </div>
                     )}
 
+                    <PodmanSetup />
+
                     {success && (
                         <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
                             Update installed. The server is online and the
@@ -472,4 +470,28 @@ async function responseError(response: Response, fallback: string) {
     }
 
     return message.length > 240 ? `${message.slice(0, 237)}...` : message;
+}
+
+function PodmanSetup() {
+    const [status, setStatus] = useState<{ state: string; error?: string } | null>(null);
+    const [error, setError] = useState("");
+    const [busy, setBusy] = useState(false);
+    const refresh = useCallback(async () => {
+        try {
+            const response = await fetch("/post/update/podman", { cache: "no-store" });
+            if (!response.ok) throw new Error(await responseError(response, "Could not read Podman setup status"));
+            setStatus(await response.json()); setError("");
+        } catch (error) { setError(error instanceof Error ? error.message : "Could not read Podman setup status"); }
+    }, []);
+    useEffect(() => { void refresh(); const timer = setInterval(refresh, 2000); return () => clearInterval(timer); }, [refresh]);
+    return <div className="rounded-md border border-border px-3 py-3 text-xs space-y-2">
+        <div className="flex items-center justify-between gap-3"><strong>Podman user setup</strong><button type="button" className="rounded border border-border px-2 py-1 disabled:opacity-50" disabled={busy || !status || status.state === "running"} onClick={async () => {
+            setBusy(true); setError("");
+            try { const response = await fetch("/post/update/podman", { method: "POST" }); if (!response.ok) throw new Error(await responseError(response, "Podman setup failed")); setStatus(await response.json()); }
+            catch (error) { setError(error instanceof Error ? error.message : "Podman setup failed"); }
+            finally { setBusy(false); }
+        }}>{status?.state === "running" ? "Applying…" : status?.state === "failed" ? "Retry setup" : "Apply user setup"}</button></div>
+        <p className="text-muted-foreground">{status?.state === "done" ? "Existing users are configured. New users are configured automatically." : status?.state === "running" ? "Configuring Podman, linger and boot services for existing users…" : "User setup runs automatically after the binary update."}</p>
+        {(error || status?.error) && <p role="alert" className="text-destructive">{error || status?.error}</p>}
+    </div>;
 }

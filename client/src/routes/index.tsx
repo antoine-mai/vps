@@ -6,7 +6,7 @@ import { runtime } from "../runtime";
 import AgentRoute from "./agent";
 import AppsRoute from "./apps";
 import ContainersRoute from "./containers";
-import DockerContainersRoute from "./docker";
+import PodmanContainersRoute from "./podman";
 import APIsRoute from "./apis";
 import FilesRoute from "./files";
 import LoginRoute from "./login";
@@ -39,8 +39,8 @@ export default function AppRoutes() {
             <Route path="/files" element={<ProtectedRoute><FilesRoute /></ProtectedRoute>} />
             <Route path="/vhosts" element={<ProtectedRoute><VHostsRoute /></ProtectedRoute>} />
             <Route path="/apps" element={<ProtectedRoute><ContainersRoute /></ProtectedRoute>} />
-            <Route path="/containers" element={<ProtectedRoute><DockerContainersRoute /></ProtectedRoute>} />
-            <Route path="/containers/:id" element={<ProtectedRoute><DockerContainersRoute /></ProtectedRoute>} />
+            <Route path="/containers" element={<ProtectedRoute>{runtime.isRoot ? <PodmanContainersRoute /> : <ContainersRoute />}</ProtectedRoute>} />
+            <Route path="/containers/:id" element={<ProtectedRoute>{runtime.isRoot ? <PodmanContainersRoute /> : <ContainersRoute />}</ProtectedRoute>} />
             <Route path="/tasking" element={<ProtectedRoute><TaskingRoute /></ProtectedRoute>} />
             <Route path="/backup" element={<ProtectedRoute><BackupRoute /></ProtectedRoute>} />
             <Route path="/agent" element={<ProtectedRoute><AgentRoute /></ProtectedRoute>} />

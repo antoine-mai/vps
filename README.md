@@ -130,3 +130,33 @@ Arch Linux:
 sudo pacman -Sy --noconfirm libxcrypt-compat
 sudo systemctl restart mthan-vps@root.service
 ```
+
+## Podman ownership and boot recovery
+
+Podman is the only supported container engine. The root panel manages root's Podman store and can administer a selected user's separate rootless store; each user panel manages only its own account. Commands receive a clean environment with the owner's HOME, config/data paths, runtime directory and systemd user bus. Remote connection variables from another account are not inherited. Existing Dockerfile/Compose build formats and image registries remain usable; existing Docker containers are not automatically migrated.
+
+The installer installs Podman plus rootless dependencies and runs `mthanctl podman-setup`. Installing Podman from the app runs the same provisioning code. It enables the system `podman-restart.service`, provides a user unit when the distribution does not ship one, and configures existing interactive accounts, including normal users with custom home paths. Distribution-provided restart units take precedence over the generated fallback. New app-created users receive distinct subordinate UID/GID ranges, verified linger, a running `user@UID.service`, and an enabled user restart unit. Provisioning failures are reported rather than ignored; an already-created account is retained for repair.
+
+New containers default to `--restart always`. Explicit `no` and `on-failure` policies are not a promise of boot startup; the enabled restart service follows the installed Podman unit's policy filters. A user unit operates on that user's store, not root's. Linger keeps the user manager available without an interactive login.
+
+Repair or apply configuration on an existing installation, as root:
+
+```sh
+mthanctl podman-setup          # Host services and existing interactive accounts
+mthanctl podman-setup alice    # One existing non-root Linux account
+loginctl show-user alice -p Linger --value
+systemctl is-enabled podman-restart.service
+runuser -u alice -- env -i HOME=/home/alice USER=alice LOGNAME=alice \
+  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  XDG_RUNTIME_DIR=/run/user/$(id -u alice) \
+  DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u alice)/bus \
+  systemctl --user is-enabled podman-restart.service
+```
+
+The setup does not start or stop containers immediately. Boot behavior should be verified on a disposable VPS before scheduling a production reboot. Existing Docker daemon installations are not uninstalled by this source change.
+
+### Upgrading through the admin Update button
+
+No terminal command is required for the Podman migration. After the updated main binary starts as root, it automatically applies the existing-user setup in the background, installing Podman/rootless packages if needed. A versioned success receipt is written to settings only after completion; failed or interrupted setup is retried on the next root-service start. This migration is embedded in `mthan-vps` and does not require an updated `mthanctl` binary.
+
+Open the admin Update dialog to see **Podman user setup** and use **Apply user setup** / **Retry setup** to rerun it. The status and trigger endpoints are root-authenticated `/post/update/podman` (GET/POST). Concurrent setup requests share one running operation. A binary update and a successful Podman setup are separate statuses; setup failure leaves the admin available for repair.

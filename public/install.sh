@@ -154,56 +154,9 @@ install_caddy() {
   configure_caddy_users_dir
 }
 
-install_docker() {
-  if command -v docker > /dev/null 2>&1; then
-    echo "Docker is already installed: $(docker --version 2>/dev/null || true)"
-    systemctl enable --now docker 2>/dev/null || true
-    return
-  fi
-
-  echo "Installing Docker..."
-  local installed=0
-
-  if command -v apt-get > /dev/null 2>&1; then
-    apt-get update
-    if DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io; then
-      installed=1
-    fi
-  elif command -v dnf > /dev/null 2>&1; then
-    if dnf install -y docker-ce moby-engine || dnf install -y docker; then
-      installed=1
-    fi
-  elif command -v yum > /dev/null 2>&1; then
-    if yum install -y docker; then
-      installed=1
-    fi
-  elif command -v pacman > /dev/null 2>&1; then
-    if pacman -Sy --noconfirm --needed docker; then
-      installed=1
-    fi
-  fi
-
-  # Fallback to official docker installation script if package manager didn't install docker
-  if [[ "${installed}" -eq 0 ]] || ! command -v docker > /dev/null 2>&1; then
-    echo "Attempting official Docker convenience script..."
-    if command -v curl > /dev/null 2>&1; then
-      curl -fsSL https://get.docker.com | sh || true
-    elif command -v wget > /dev/null 2>&1; then
-      wget -qO- https://get.docker.com | sh || true
-    fi
-  fi
-
-  if command -v docker > /dev/null 2>&1; then
-    echo "Docker installed successfully: $(docker --version 2>/dev/null || true)"
-    systemctl enable --now docker 2>/dev/null || true
-  else
-    echo "Warning: Docker could not be installed automatically. Install it manually if needed." >&2
-  fi
-}
-
 install_podman() {
-  if command -v podman > /dev/null 2>&1; then
-    echo "Podman is already installed"
+  if command -v podman >/dev/null 2>&1 && command -v newuidmap >/dev/null 2>&1 && command -v newgidmap >/dev/null 2>&1 && command -v slirp4netns >/dev/null 2>&1 && command -v fuse-overlayfs >/dev/null 2>&1 && command -v crun >/dev/null 2>&1; then
+    echo "Podman and rootless dependencies are already installed"
     return
   fi
 
@@ -212,19 +165,19 @@ install_podman() {
 
   if command -v apt-get > /dev/null 2>&1; then
     apt-get update
-    if DEBIAN_FRONTEND=noninteractive apt-get install -y podman; then
+    if DEBIAN_FRONTEND=noninteractive apt-get install -y podman uidmap slirp4netns fuse-overlayfs crun; then
       installed=1
     fi
   elif command -v dnf > /dev/null 2>&1; then
-    if dnf install -y podman; then
+    if dnf install -y podman shadow-utils slirp4netns fuse-overlayfs crun; then
       installed=1
     fi
   elif command -v yum > /dev/null 2>&1; then
-    if yum install -y podman; then
+    if yum install -y podman shadow-utils slirp4netns fuse-overlayfs crun; then
       installed=1
     fi
   elif command -v pacman > /dev/null 2>&1; then
-    if pacman -Sy --noconfirm --needed podman; then
+    if pacman -Sy --noconfirm --needed podman shadow slirp4netns fuse-overlayfs crun; then
       installed=1
     fi
   fi
@@ -480,7 +433,6 @@ main() {
 
   install_libcrypt
   install_caddy
-  install_docker
   install_podman
   install_rclone
   configure_home_mode
@@ -490,6 +442,7 @@ main() {
     cleanup_old_install
   fi
   download_binaries
+  "${CTL_INSTALL_PATH}" podman-setup
   create_service
   start_service
 

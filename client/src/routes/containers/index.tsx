@@ -44,7 +44,7 @@ export type ContainerRecord = {
     status: string;
     createdAt?: string;
     ports: string[];
-    type?: "docker" | "direct";
+    type?: "podman" | "direct";
     runtime?: string;
     path?: string;
     relativePath?: string;
@@ -751,13 +751,13 @@ export function ContainersContent({
     const [createImage, setCreateImage] = useState("");
     const [createOwner, setCreateOwner] = useState(effectiveDefaultOwner);
     const [createCommand, setCreateCommand] = useState("");
-    const [createRestartPolicy, setCreateRestartPolicy] = useState("unless-stopped");
+    const [createRestartPolicy, setCreateRestartPolicy] = useState("always");
     const [createPorts, setCreatePorts] = useState<Array<{ host: string; container: string }>>([]);
     const [createVolumes, setCreateVolumes] = useState<Array<{ host: string; container: string }>>([]);
     const [createEnv, setCreateEnv] = useState<Array<{ key: string; value: string }>>([]);
     const [createLoading, setCreateLoading] = useState(false);
     const [createError, setCreateError] = useState("");
-    const [customAppMode, setCustomAppMode] = useState<"docker" | "direct">("docker");
+    const [customAppMode, setCustomAppMode] = useState<"podman" | "direct">("podman");
     const [directRuntime, setDirectRuntime] = useState<"php" | "node" | "python" | "static">("php");
 
     // Delete container modal state
@@ -948,7 +948,7 @@ export function ContainersContent({
 
     const openCreateModal = () => {
         setCreateTab("system");
-        setCustomAppMode("docker");
+        setCustomAppMode("podman");
         setDirectRuntime("php");
         setCreateName("");
         const initial = allowedTemplates[0] || templates[0];
@@ -969,7 +969,7 @@ export function ContainersContent({
         setLibCategory("all");
         setCreateOwner(effectiveDefaultOwner);
         setCreateCommand("");
-        setCreateRestartPolicy("unless-stopped");
+        setCreateRestartPolicy("always");
         setCreateError("");
         setCreateModalOpen(true);
     };
@@ -1032,8 +1032,8 @@ export function ContainersContent({
             const payload = {
                 name: trimmedName,
                 owner: selectedOwner,
-                type: isDirect ? "direct" : "docker",
-                runtime: isDirect ? directRuntime : "docker",
+                type: isDirect ? "direct" : "podman",
+                runtime: isDirect ? directRuntime : "podman",
                 image: isDirect ? "" : trimmedImage,
                 command: isDirect ? "" : createCommand.trim(),
                 restartPolicy: isDirect ? "" : createRestartPolicy,
@@ -1310,8 +1310,8 @@ export function ContainersContent({
                     onChange={(e) => setCreateRestartPolicy(e.target.value)}
                     className="h-8 w-full rounded border border-input bg-background px-2.5 text-xs outline-none focus:border-primary"
                 >
-                    <option value="unless-stopped">Unless Stopped (Recommended)</option>
-                    <option value="always">Always</option>
+                    <option value="unless-stopped">Unless Stopped</option>
+                    <option value="always">Always (Recommended)</option>
                     <option value="on-failure">On Failure</option>
                     <option value="no">Do not restart (No)</option>
                 </select>
@@ -1677,7 +1677,7 @@ export function ContainersContent({
                                                 ) : (
                                                     <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-2 py-0.5 font-medium text-xs text-blue-600 dark:text-blue-400">
                                                         <Box className="h-3 w-3" />
-                                                        Docker
+                                                        Podman
                                                     </span>
                                                 )}
                                             </td>
@@ -2087,17 +2087,17 @@ export function ContainersContent({
                                                     <div className="grid grid-cols-2 gap-3">
                                                         <button
                                                             type="button"
-                                                            onClick={() => setCustomAppMode("docker")}
+                                                            onClick={() => setCustomAppMode("podman")}
                                                             className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-all ${
-                                                                customAppMode === "docker"
+                                                                customAppMode === "podman"
                                                                     ? "border-primary bg-primary/5 ring-1 ring-primary"
                                                                     : "border-border hover:bg-muted/50"
                                                             }`}
                                                         >
-                                                            <Box className={`h-5 w-5 mt-0.5 shrink-0 ${customAppMode === "docker" ? "text-primary" : "text-muted-foreground"}`} />
+                                                            <Box className={`h-5 w-5 mt-0.5 shrink-0 ${customAppMode === "podman" ? "text-primary" : "text-muted-foreground"}`} />
                                                             <div>
-                                                                <p className={`text-xs font-semibold ${customAppMode === "docker" ? "text-primary" : "text-foreground"}`}>
-                                                                    Docker Container
+                                                                <p className={`text-xs font-semibold ${customAppMode === "podman" ? "text-primary" : "text-foreground"}`}>
+                                                                    Podman Container
                                                                 </p>
                                                                 <p className="mt-0.5 text-xs text-muted-foreground">
                                                                     Run containerized applications from Docker Hub or any image registry.

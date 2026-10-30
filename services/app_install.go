@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"mthan/vps/internal/podman"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,29 +13,25 @@ var appPackages = map[string]map[string][][]string{
 	"apt-get": {
 		"bind9":  {{"bind9", "bind9utils"}},
 		"caddy":  {{"caddy"}},
-		"docker": {{"docker.io"}, {"docker-ce"}},
-		"podman": {{"podman"}},
+		"podman": {{"podman", "uidmap", "slirp4netns", "fuse-overlayfs", "crun"}},
 		"rclone": {{"rclone"}},
 	},
 	"dnf": {
 		"bind9":  {{"bind", "bind-utils"}},
 		"caddy":  {{"caddy"}},
-		"docker": {{"docker-ce"}, {"moby-engine"}, {"docker"}},
-		"podman": {{"podman"}},
+		"podman": {{"podman", "shadow-utils", "slirp4netns", "fuse-overlayfs", "crun"}},
 		"rclone": {{"rclone"}},
 	},
 	"yum": {
 		"bind9":  {{"bind", "bind-utils"}},
 		"caddy":  {{"caddy"}},
-		"docker": {{"docker"}, {"docker-ce"}},
-		"podman": {{"podman"}},
+		"podman": {{"podman", "shadow-utils", "slirp4netns", "fuse-overlayfs", "crun"}},
 		"rclone": {{"rclone"}},
 	},
 	"pacman": {
 		"bind9":  {{"bind"}},
 		"caddy":  {{"caddy"}},
-		"docker": {{"docker"}},
-		"podman": {{"podman"}},
+		"podman": {{"podman", "shadow", "slirp4netns", "fuse-overlayfs", "crun"}},
 		"rclone": {{"rclone"}},
 	},
 }
@@ -62,6 +59,9 @@ func InstallApp(name string) error {
 		cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive")
 		output, err := cmd.CombinedOutput()
 		if err == nil {
+			if name == "podman" {
+				return podman.SetupHost()
+			}
 			if name == "caddy" {
 				_ = EnsureCaddyMThanUsers()
 			}

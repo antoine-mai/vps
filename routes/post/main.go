@@ -10,8 +10,8 @@ import (
 	postapis "mthan/vps/routes/post/apis"
 	postapps "mthan/vps/routes/post/apps"
 	appconfig "mthan/vps/routes/post/apps/config"
-	postcontainers "mthan/vps/routes/post/containers"
 	postbackup "mthan/vps/routes/post/backup"
+	postcontainers "mthan/vps/routes/post/containers"
 	postfiles "mthan/vps/routes/post/files"
 	postlogin "mthan/vps/routes/post/login"
 	"mthan/vps/routes/post/ping"
@@ -49,6 +49,8 @@ func Register(mux *http.ServeMux, deps Dependencies) {
 	mux.Handle("GET /post/session", postOnly(deps.Startup, deps.Sessions, session.Handler(deps.Sessions)))
 	mux.Handle("GET /post/system", postOnly(deps.Startup, deps.Sessions, authenticatedSystemHandler(deps.Sessions, deps.System)))
 	mux.Handle("GET /post/update", postOnly(deps.Startup, deps.Sessions, update.CheckHandler(deps.Update)))
+	mux.Handle("GET /post/update/podman", postOnly(deps.Startup, deps.Sessions, update.PodmanSetupHandler(deps.Update)))
+	mux.Handle("POST /post/update/podman", postOnly(deps.Startup, deps.Sessions, update.PodmanSetupHandler(deps.Update)))
 	mux.Handle("POST /post/update", postOnly(deps.Startup, deps.Sessions, update.SelfUpdateHandler(deps.Update)))
 	mux.Handle("POST /post/ping", postOnly(deps.Startup, deps.Sessions, ping.Handler()))
 	mux.Handle("GET /post/user/list", postOnly(deps.Startup, deps.Sessions, userlist.Handler()))

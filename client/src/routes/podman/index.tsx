@@ -25,7 +25,7 @@ import DashboardLayout from "_layouts/dashboard";
 import { Button } from "_layouts/_components/ui/button";
 import { runtime } from "../../runtime";
 
-export type DockerContainer = {
+export type PodmanContainer = {
     id: string;
     name: string;
     image: string;
@@ -42,11 +42,11 @@ export type DockerContainer = {
     relativePath?: string;
 };
 
-export default function DockerContainersRoute() {
+export default function PodmanContainersRoute() {
     const { id: routeId } = useParams<{ id?: string }>();
     const navigate = useNavigate();
 
-    const [containers, setContainers] = useState<DockerContainer[]>([]);
+    const [containers, setContainers] = useState<PodmanContainer[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(routeId || null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -60,7 +60,7 @@ export default function DockerContainersRoute() {
     const [createName, setCreateName] = useState("");
     const [createImage, setCreateImage] = useState("");
     const [createCommand, setCreateCommand] = useState("");
-    const [createRestartPolicy, setCreateRestartPolicy] = useState("unless-stopped");
+    const [createRestartPolicy, setCreateRestartPolicy] = useState("always");
     const [createPorts, setCreatePorts] = useState<Array<{ host: string; container: string }>>([]);
     const [createVolumes, setCreateVolumes] = useState<Array<{ host: string; container: string }>>([]);
     const [createEnv, setCreateEnv] = useState<Array<{ key: string; value: string }>>([]);
@@ -68,22 +68,22 @@ export default function DockerContainersRoute() {
     const [createError, setCreateError] = useState("");
 
     // Logs modal state
-    const [logsModal, setLogsModal] = useState<DockerContainer | null>(null);
+    const [logsModal, setLogsModal] = useState<PodmanContainer | null>(null);
     const [logsContent, setLogsContent] = useState("");
     const [logsLoading, setLogsLoading] = useState(false);
 
     // Dockerfile modal state
-    const [dockerfileModal, setDockerfileModal] = useState<DockerContainer | null>(null);
+    const [dockerfileModal, setDockerfileModal] = useState<PodmanContainer | null>(null);
     const [dockerfileContent, setDockerfileContent] = useState("");
     const [dockerfileLoading, setDockerfileLoading] = useState(false);
     const [dockerfileSaving, setDockerfileSaving] = useState(false);
     const [dockerfileError, setDockerfileError] = useState("");
 
     // Delete modal state
-    const [deleteModal, setDeleteModal] = useState<DockerContainer | null>(null);
+    const [deleteModal, setDeleteModal] = useState<PodmanContainer | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    // Fetch root Docker containers
+    // Fetch root Podman containers
     const fetchContainers = useCallback(async () => {
         setLoading(true);
         setError("");
@@ -91,13 +91,13 @@ export default function DockerContainersRoute() {
             const res = await fetch("/post/containers?owner=root", { cache: "no-store" });
             if (!res.ok) {
                 const text = await res.text();
-                throw new Error(text || "Failed to load Docker containers");
+                throw new Error(text || "Failed to load Podman containers");
             }
             const data = await res.json();
-            const loaded: DockerContainer[] = data.containers || [];
+            const loaded: PodmanContainer[] = data.containers || [];
             setContainers(loaded);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to load Docker containers");
+            setError(err instanceof Error ? err.message : "Failed to load Podman containers");
         } finally {
             setLoading(false);
         }
@@ -137,14 +137,14 @@ export default function DockerContainersRoute() {
     }, [containers, selectedId, routeId]);
 
     // Select container handler
-    const handleSelectContainer = (container: DockerContainer) => {
+    const handleSelectContainer = (container: PodmanContainer) => {
         const id = container.id || container.name;
         setSelectedId(id);
         navigate(`/containers/${encodeURIComponent(id)}`, { replace: true });
     };
 
     // Perform container action (start, stop, restart)
-    const handleAction = async (container: DockerContainer, action: "start" | "stop" | "restart") => {
+    const handleAction = async (container: PodmanContainer, action: "start" | "stop" | "restart") => {
         const targetId = container.id || container.name;
         setActionLoadingId(targetId);
         try {
@@ -155,7 +155,7 @@ export default function DockerContainersRoute() {
                     action,
                     owner: "root",
                     id: targetId,
-                    engine: "docker",
+                    engine: "podman",
                 }),
             });
             if (!res.ok) {
@@ -183,7 +183,7 @@ export default function DockerContainersRoute() {
                     action: "delete",
                     owner: "root",
                     id: targetId,
-                    engine: "docker",
+                    engine: "podman",
                 }),
             });
             if (!res.ok) {
@@ -202,14 +202,14 @@ export default function DockerContainersRoute() {
     };
 
     // Open Logs
-    const handleOpenLogs = async (container: DockerContainer) => {
+    const handleOpenLogs = async (container: PodmanContainer) => {
         setLogsModal(container);
         setLogsLoading(true);
         setLogsContent("");
         const targetId = container.id || container.name;
         try {
             const res = await fetch(
-                `/post/containers/logs?engine=docker&owner=root&id=${encodeURIComponent(targetId)}`,
+                `/post/containers/logs?engine=podman&owner=root&id=${encodeURIComponent(targetId)}`,
                 { cache: "no-store" }
             );
             if (!res.ok) throw new Error("Failed to load logs");
@@ -223,7 +223,7 @@ export default function DockerContainersRoute() {
     };
 
     // Open Dockerfile
-    const handleOpenDockerfile = async (container: DockerContainer) => {
+    const handleOpenDockerfile = async (container: PodmanContainer) => {
         setDockerfileModal(container);
         setDockerfileLoading(true);
         setDockerfileError("");
@@ -231,7 +231,7 @@ export default function DockerContainersRoute() {
         const targetId = container.id || container.name;
         try {
             const res = await fetch(
-                `/post/containers/dockerfile?engine=docker&owner=root&id=${encodeURIComponent(targetId)}`,
+                `/post/containers/dockerfile?engine=podman&owner=root&id=${encodeURIComponent(targetId)}`,
                 { cache: "no-store" }
             );
             if (!res.ok) throw new Error("Failed to load Dockerfile");
@@ -252,7 +252,7 @@ export default function DockerContainersRoute() {
         const targetId = dockerfileModal.id || dockerfileModal.name;
         try {
             const res = await fetch(
-                `/post/containers/dockerfile?engine=docker&owner=root&id=${encodeURIComponent(targetId)}`,
+                `/post/containers/dockerfile?engine=podman&owner=root&id=${encodeURIComponent(targetId)}`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -286,7 +286,7 @@ export default function DockerContainersRoute() {
             return;
         }
         if (!trimmedImage) {
-            setCreateError("Docker image is required.");
+            setCreateError("Podman image is required.");
             return;
         }
 
@@ -311,8 +311,8 @@ export default function DockerContainersRoute() {
             const payload = {
                 name: trimmedName,
                 owner: "root",
-                type: "docker",
-                runtime: "docker",
+                type: "podman",
+                runtime: "podman",
                 image: trimmedImage,
                 command: createCommand.trim(),
                 restartPolicy: createRestartPolicy,
@@ -329,7 +329,7 @@ export default function DockerContainersRoute() {
 
             if (!res.ok) {
                 const text = await res.text();
-                throw new Error(text || "Failed to create Docker container");
+                throw new Error(text || "Failed to create Podman container");
             }
 
             setCreateModalOpen(false);
@@ -343,7 +343,7 @@ export default function DockerContainersRoute() {
             setSelectedId(trimmedName);
             navigate(`/containers/${encodeURIComponent(trimmedName)}`, { replace: true });
         } catch (err) {
-            setCreateError(err instanceof Error ? err.message : "Failed to create Docker container");
+            setCreateError(err instanceof Error ? err.message : "Failed to create Podman container");
         } finally {
             setCreateLoading(false);
         }
@@ -356,7 +356,7 @@ export default function DockerContainersRoute() {
                     <AlertCircle className="h-12 w-12 text-destructive mb-3" />
                     <h2 className="text-lg font-semibold text-foreground">Access Restricted</h2>
                     <p className="text-xs text-muted-foreground mt-1 max-w-md">
-                        Docker system containers are restricted to the root administrator.
+                        Podman system containers are restricted to the root administrator.
                     </p>
                 </div>
             </DashboardLayout>
@@ -395,7 +395,7 @@ export default function DockerContainersRoute() {
                                     setCreateModalOpen(true);
                                 }}
                                 className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                                title="Create Docker container"
+                                title="Create Podman container"
                             >
                                 <Plus className="h-3.5 w-3.5" />
                             </button>
@@ -499,7 +499,7 @@ export default function DockerContainersRoute() {
                                                 {selectedContainer.status || (isRunning ? "Running" : "Stopped")}
                                             </span>
                                             <span className="rounded border border-border bg-muted/60 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
-                                                Docker (Root)
+                                                Podman (Root)
                                             </span>
                                         </div>
                                         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -699,9 +699,9 @@ export default function DockerContainersRoute() {
                         /* Empty state when no container is available */
                         <div className="flex flex-1 flex-col items-center justify-center p-12 text-center">
                             <Box className="mb-3 h-12 w-12 text-muted-foreground/40" />
-                            <h3 className="text-base font-semibold text-foreground">No Docker containers found</h3>
+                            <h3 className="text-base font-semibold text-foreground">No Podman containers found</h3>
                             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                                Deploy system Docker containers to run background services under /root/htdocs.
+                                Deploy system Podman containers to run background services under /root/htdocs.
                             </p>
                             <Button
                                 size="sm"
@@ -727,8 +727,8 @@ export default function DockerContainersRoute() {
                             <div className="flex items-center gap-2">
                                 <Box className="h-5 w-5 text-primary" />
                                 <div>
-                                    <h3 className="text-sm font-semibold text-foreground">Create Docker Container</h3>
-                                    <p className="text-[11px] text-muted-foreground">Runs as root via Docker engine</p>
+                                    <h3 className="text-sm font-semibold text-foreground">Create Podman Container</h3>
+                                    <p className="text-[11px] text-muted-foreground">Runs as root via Podman engine</p>
                                 </div>
                             </div>
                             <Button
@@ -764,7 +764,7 @@ export default function DockerContainersRoute() {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-xs font-semibold text-foreground">Docker Image *</label>
+                                <label className="text-xs font-semibold text-foreground">Podman Image *</label>
                                 <input
                                     type="text"
                                     value={createImage}
@@ -783,7 +783,7 @@ export default function DockerContainersRoute() {
                                     className="h-8 w-full rounded border border-input bg-background px-2.5 text-xs outline-none focus:border-primary"
                                 >
                                     <option value="unless-stopped">Unless Stopped (default)</option>
-                                    <option value="always">Always</option>
+                                    <option value="always">Always (Recommended)</option>
                                     <option value="on-failure">On Failure</option>
                                     <option value="no">No</option>
                                 </select>
@@ -981,7 +981,7 @@ export default function DockerContainersRoute() {
                                     <h3 className="text-sm font-semibold text-foreground">
                                         Logs: {logsModal.name || logsModal.id}
                                     </h3>
-                                    <p className="text-[11px] text-muted-foreground">Engine: Docker</p>
+                                    <p className="text-[11px] text-muted-foreground">Engine: Podman</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -1104,7 +1104,7 @@ export default function DockerContainersRoute() {
                             <span className="font-mono font-semibold text-foreground">
                                 {deleteModal.name || deleteModal.id}
                             </span>
-                            ? This will stop and remove the Docker container and delete its directory{" "}
+                            ? This will stop and remove the Podman container and delete its directory{" "}
                             <span className="font-mono text-foreground">/root/htdocs/{deleteModal.name}</span>.
                         </p>
                         <div className="flex items-center justify-end gap-2 border-t border-border pt-4">

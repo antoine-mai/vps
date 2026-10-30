@@ -2,6 +2,7 @@ package services
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -9,6 +10,59 @@ import (
 )
 
 var DefaultUserDirectories = []string{"backup", "logs", "data", "htdocs", "config"}
+
+const DefaultUserContainersConfig = `[engine]
+# Each owner uses their own systemd cgroup hierarchy and event log.
+cgroup_manager = "systemd"
+events_logger = "file"
+`
+
+func ProvisionUserContainersConfig(home string, uid, gid int) error {
+	configDir := filepath.Join(home, ".config")
+	if info, err := os.Lstat(configDir); err == nil && (!info.IsDir() || info.Mode()&os.ModeSymlink != 0) {
+		return fmt.Errorf("config directory must be a real directory")
+	}
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return err
+	}
+	if err := os.Chmod(configDir, 0755); err != nil {
+		return err
+	}
+	if err := os.Chown(configDir, uid, gid); err != nil {
+		return err
+	}
+
+	containersDir := filepath.Join(configDir, "containers")
+	if info, err := os.Lstat(containersDir); err == nil && (!info.IsDir() || info.Mode()&os.ModeSymlink != 0) {
+		return fmt.Errorf("containers directory must be a real directory")
+	}
+	if err := os.MkdirAll(containersDir, 0755); err != nil {
+		return err
+	}
+	if err := os.Chmod(containersDir, 0755); err != nil {
+		return err
+	}
+	if err := os.Chown(containersDir, uid, gid); err != nil {
+		return err
+	}
+
+	configFile := filepath.Join(containersDir, "containers.conf")
+	if info, err := os.Lstat(configFile); err == nil {
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("containers.conf must be a regular file")
+		}
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	if err := os.WriteFile(configFile, []byte(DefaultUserContainersConfig), 0644); err != nil {
+		return err
+	}
+	if err := os.Chmod(configFile, 0644); err != nil {
+		return err
+	}
+	return os.Chown(configFile, uid, gid)
+}
 
 func ProvisionUserHome(home string, uid, gid int) error {
 	if err := os.MkdirAll(home, 0755); err != nil {
@@ -32,6 +86,10 @@ func ProvisionUserHome(home string, uid, gid int) error {
 		if err := os.Chown(directory, uid, gid); err != nil {
 			return err
 		}
+	}
+
+	if err := ProvisionUserContainersConfig(home, uid, gid); err != nil {
+		return err
 	}
 
 	return nil
