@@ -1,3 +1,4 @@
+import NameserverSettings from "./NameserverSettings";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
@@ -339,7 +340,9 @@ export default function AppsRoute() {
                             ) : null}
 
                             {selectedApp.name === "bind9" ? (
-                                <section className="space-y-3">
+                                <section className="space-y-4">
+                                    <NameserverSettings installed={selectedApp.installed} />
+                                    <details className="space-y-3"><summary className="cursor-pointer text-xs text-muted-foreground">Advanced configuration</summary>
                                     <div>
                                         <h3 className="text-sm font-semibold text-foreground">BIND 9 configuration</h3>
                                         <p className="mt-1 text-xs text-muted-foreground">BIND 9 (named) is the system DNS nameserver operating on UDP/TCP port 53.</p>
@@ -394,6 +397,7 @@ export default function AppsRoute() {
                                             </div>
                                         </div>
                                     </div>
+                                    </details>
                                 </section>
                             ) : null}
                         </div>

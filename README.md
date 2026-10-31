@@ -160,3 +160,11 @@ The setup does not start or stop containers immediately. Boot behavior should be
 No terminal command is required for the Podman migration. After the updated main binary starts as root, it automatically applies the existing-user setup in the background, installing Podman/rootless packages if needed. A versioned success receipt is written to settings only after completion; failed or interrupted setup is retried on the next root-service start. This migration is embedded in `mthan-vps` and does not require an updated `mthanctl` binary.
 
 Open the admin Update dialog to see **Podman user setup** and use **Apply user setup** / **Retry setup** to rerun it. The status and trigger endpoints are root-authenticated `/post/update/podman` (GET/POST). Concurrent setup requests share one running operation. A binary update and a successful Podman setup are separate statuses; setup failure leaves the admin available for repair.
+
+## Simple nameserver settings
+
+Root Settings → Apps → Nameserver now offers hostname/IP rows and **Save & apply**. Names such as `ns1.example.com` and `ns2.example.com` receive A/AAAA host records, NS records and an SOA in app-managed bootstrap zones. A detected public IPv4 address is suggested, and additional rows reuse the first address. Advanced raw configuration remains collapsed below the form.
+
+The root-only GET/PUT `/post/nameservers` API validates names/IPs, checks revision conflicts, runs `named-checkzone` and `named-checkconf`, and applies BIND through `rndc` or its systemd unit. Managed generations keep the prior configuration available for rollback. Existing externally managed zones and manually edited managed zone files are refused rather than overwritten. Generated configurations live under `/etc/bind/mthan-nameservers` or `/var/named/mthan-nameservers`; only a marked include is added to the main config.
+
+This creates bootstrap nameserver records, not a general website/mail zone editor. Register child nameservers/glue at the domain registrar, ensure BIND listens on the intended address and TCP/UDP 53 is reachable, and provision the remaining records before delegating a live domain. The form does not change registrar settings, listener options or firewall rules. No production DNS configuration is changed by tests; tests run real BIND validators against temporary files and mock daemon reloads.

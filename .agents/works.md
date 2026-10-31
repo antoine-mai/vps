@@ -23,6 +23,13 @@ This file is for handoff between agents. Keep entries concise, factual, and newe
 
 ## Work Entries
 
+### 2026-10-31 - Simple nameserver hostname/IP form
+
+- Root Nameserver settings now has Add nameserver and Save & apply, public IPv4 suggestion, registrar/glue instructions, and collapsed Advanced configuration.
+- Added root-authenticated GET/PUT `/post/nameservers`; validated hostname/IP inputs, revision checks, BIND-generated bootstrap zones, staged syntax checks and rollback on reload failure. Existing external zones and manually changed managed zone records are preserved by refusing conflicting writes.
+- Supports IPv4/IPv6 host records and distro config paths. Registrar delegation, additional web/mail records, listener/firewall changes remain external to this form.
+- Validation uses real `named-checkconf`/`named-checkzone` on temporary files, mocked reloads, full Go tests and frontend build. No production DNS service is modified.
+
 ### 2026-10-31 - Automatic Podman migration after admin binary update
 
 - Root `mthan-vps` now runs the embedded existing-user Podman setup automatically after upgrade. Missing runtime dependencies use the app package installer; no dependency on the separately installed `mthanctl` version.
