@@ -23,12 +23,10 @@ This file is for handoff between agents. Keep entries concise, factual, and newe
 
 ## Work Entries
 
-### 2026-10-31 - Simple nameserver hostname/IP form
+### 2026-10-31 - Remove nameserver feature
 
-- Root Nameserver settings now has Add nameserver and Save & apply, public IPv4 suggestion, registrar/glue instructions, and collapsed Advanced configuration.
-- Added root-authenticated GET/PUT `/post/nameservers`; validated hostname/IP inputs, revision checks, BIND-generated bootstrap zones, staged syntax checks and rollback on reload failure. Existing external zones and manually changed managed zone records are preserved by refusing conflicting writes.
-- Supports IPv4/IPv6 host records and distro config paths. Registrar delegation, additional web/mail records, listener/firewall changes remain external to this form.
-- Validation uses real `named-checkconf`/`named-checkzone` on temporary files, mocked reloads, full Go tests and frontend build. No production DNS service is modified.
+- Removed all Nameserver/BIND UI, API, installation/service registration, editable config paths and feature tests. Existing OS packages and DNS configurations are left intact.
+
 
 ### 2026-10-31 - Automatic Podman migration after admin binary update
 

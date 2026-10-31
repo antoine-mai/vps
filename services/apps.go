@@ -26,7 +26,6 @@ type appDefinition struct {
 }
 
 var knownApps = []appDefinition{
-	{name: "bind9", binaries: []string{"named", "/usr/sbin/named", "/usr/bin/named"}, services: []string{"named.service", "bind9.service"}, versionArgs: []string{"-v"}},
 	{name: "caddy", binaries: []string{"caddy", "/usr/bin/caddy", "/usr/local/bin/caddy"}, services: []string{"caddy.service"}, versionArgs: []string{"version"}},
 	{name: "podman", binaries: []string{"podman", "/usr/bin/podman", "/usr/local/bin/podman"}, versionArgs: []string{"--version"}},
 	{name: "rclone", binaries: []string{"rclone", "/usr/bin/rclone", "/usr/local/bin/rclone"}, versionArgs: []string{"version"}},
