@@ -32,7 +32,6 @@ import DashboardLayout from "_layouts/dashboard";
 import { Button } from "_layouts/_components/ui/button";
 import { useApp } from "_contexts/app";
 import UserTerminal from "_components/user-terminal";
-import FilesRoute from "../../files";
 import VHostsRoute from "../../vhosts";
 import ContainersRoute from "../../containers";
 import BackupRoute from "../../backup";
@@ -605,7 +604,6 @@ export default function UsersRoute() {
                                     {isOpen ? (
                                         <nav className="ml-5 border-l border-border py-1 pl-2">
                                             <UserSubItem username={u.username} section="overview" active={activeSection === "overview"} icon={LayoutDashboard} label="Overview" />
-                                            <UserSubItem username={u.username} section="files" active={activeSection === "files"} icon={Folder} label="Files" />
                                             <UserSubItem username={u.username} section="containers" active={activeSection === "containers"} icon={AppWindow} label="Apps" />
                                             <UserSubItem username={u.username} section="vhosts" active={activeSection === "vhosts"} icon={Globe} label="VHosts" />
                                             <UserSubItem username={u.username} section="tasking" active={activeSection === "tasking"} icon={CalendarClock} label="Tasking" />
@@ -699,23 +697,7 @@ export default function UsersRoute() {
                                 </div>
                             </div>
 
-                            {activeSection === "files" ? (
-                                /* File Explorer filling 100% remaining space without page scrollbar */
-                                <div className="flex-1 min-h-0 w-full overflow-hidden">
-                                    {(() => {
-                                        const queryPath = new URLSearchParams(window.location.search).get("path");
-                                        const targetPath = queryPath || selectedUser.home;
-                                        return (
-                                            <FilesRoute
-                                                key={`${selectedUser.username}:${targetPath}`}
-                                                initialPath={targetPath}
-                                                rootLabel={selectedUser.username}
-                                                embedded={true}
-                                            />
-                                        );
-                                    })()}
-                                </div>
-                            ) : activeSection === "terminal" ? (
+                            {activeSection === "terminal" ? (
                                 /* Embedded User Terminal filling 100% remaining space */
                                 <div className="flex-1 min-h-0 w-full overflow-hidden">
                                     <UserTerminal
@@ -822,14 +804,7 @@ export default function UsersRoute() {
                                                                     Disk: {overviewData.storage.diskUsage.toFixed(1)}% ({formatStorageBytes(overviewData.storage.diskUsed)} / {formatStorageBytes(overviewData.storage.diskTotal)})
                                                                 </p>
                                                             </div>
-                                                            <div className="mt-4 pt-3 border-t border-border">
-                                                                <Link
-                                                                    to={`/users/${encodeURIComponent(selectedUser.username)}/files`}
-                                                                    className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1"
-                                                                >
-                                                                    Browse files →
-                                                                </Link>
-                                                            </div>
+
                                                         </div>
 
                                                         {/* Card 4: Resource Limits */}
@@ -1075,9 +1050,6 @@ export default function UsersRoute() {
                     </div>
                     <button className="mt-1 flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={() => navigateFromContextMenu("overview")} role="menuitem">
                         <LayoutDashboard className="h-3.5 w-3.5 text-muted-foreground" />Overview
-                    </button>
-                    <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={() => navigateFromContextMenu("files")} role="menuitem">
-                        <Folder className="h-3.5 w-3.5 text-muted-foreground" />Files
                     </button>
                     <button className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-muted" onClick={() => navigateFromContextMenu("containers")} role="menuitem">
                         <AppWindow className="h-3.5 w-3.5 text-muted-foreground" />Apps
@@ -1540,10 +1512,10 @@ function AlertCircle({ className }: { className?: string }) {
     );
 }
 
-type UserSection = "overview" | "files" | "containers" | "vhosts" | "terminal" | "backup" | "tasking" | "apis";
+type UserSection = "overview" | "containers" | "vhosts" | "terminal" | "backup" | "tasking" | "apis";
 
 function userSection(section?: string): UserSection {
-    return section === "files" || section === "containers" || section === "vhosts" || section === "terminal" || section === "backup" || section === "tasking" || section === "apis" ? section : "overview";
+    return section === "containers" || section === "vhosts" || section === "terminal" || section === "backup" || section === "tasking" || section === "apis" ? section : "overview";
 }
 
 function UserSubItem({ username, section, active, icon: Icon, label }: {
